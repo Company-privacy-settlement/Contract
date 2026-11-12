@@ -1,5 +1,7 @@
 # Shared anonymity with distributed custody — v2
 
+This page describes native NEAR v2. For token-bound USDC/NEP-141 v3, see [USDC.md](USDC.md).
+
 ## Trust and funds
 
 One immutable forest defines one group `(network label, registry account, denomination, verification key, vault bytecode, fee recipient)`. It creates keyless child vaults, stores a shared append-only Poseidon tree and global spent-nullifier set, and serializes authorization on NEAR. It never receives settlement principal. Vaults retain the native NEAR from deposits and pay recipients directly.

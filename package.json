@@ -13,7 +13,8 @@
     "test:shared-vault": "cargo test --locked --manifest-path contracts/shared-vault/Cargo.toml --target-dir target",
     "test:forest": "cargo test --locked --manifest-path contracts/forest/Cargo.toml --target-dir target",
     "test": "npm run test:pool && npm run test:factory && npm run test:shared-vault && npm run test:forest",
-    "zk:setup": "node scripts/setup-zk.mjs"
+    "zk:setup": "node scripts/setup-zk.mjs",
+    "build:test-ft": "node scripts/build-contract.mjs --test-fixtures"
   },
   "devDependencies": {
     "binaryen": "132.0.0",

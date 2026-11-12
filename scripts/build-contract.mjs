@@ -6,10 +6,11 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status || 1);
 }
 mkdirSync('artifacts', { recursive: true });
-rmSync('artifacts/build-manifest.json', { force: true });
+const fixtures = process.argv.includes('--test-fixtures');
+if (!fixtures) rmSync('artifacts/build-manifest.json', { force: true });
 const contracts = {};
 // Factory embeds the finalized pool bytes, so the order is part of the build.
-for (const name of ['pool', 'factory', 'shared-vault', 'forest']) {
+for (const name of (fixtures ? ['test-ft'] : ['pool', 'factory', 'shared-vault', 'forest'])) {
   const stem = name.replaceAll('-', '_');
   run('cargo', ['build', '--locked', '--manifest-path', `contracts/${name}/Cargo.toml`, '--target', 'wasm32-unknown-unknown', '--release', '--target-dir', 'target']);
   const output = `artifacts/core_${stem}.wasm`;
@@ -24,4 +25,4 @@ for (const name of ['pool', 'factory', 'shared-vault', 'forest']) {
   contracts[stem] = { wasm: `core_${stem}.wasm`, bytes: size, sha256: createHash('sha256').update(readFileSync(output)).digest('hex') };
   console.log(`NEAR-compatible optimized contract: ${output} (${size} bytes)`);
 }
-writeFileSync('artifacts/build-manifest.json', JSON.stringify({ protocol: 'core-build-v1', contracts, factoryEmbeddedVaultSha256: contracts.pool.sha256, forestEmbeddedVaultSha256: contracts.shared_vault.sha256 }, null, 2));
+if (!fixtures) writeFileSync('artifacts/build-manifest.json', JSON.stringify({ protocol: 'core-build-v1', contracts, factoryEmbeddedVaultSha256: contracts.pool.sha256, forestEmbeddedVaultSha256: contracts.shared_vault.sha256 }, null, 2));

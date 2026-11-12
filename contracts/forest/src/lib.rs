@@ -1,3 +1,5 @@
+#[path = "../../common/ft.rs"]
+mod ft;
 use near_sdk::collections::{LookupMap, LookupSet, Vector};
 #[path = "../../pool/src/crypto.rs"]
 mod crypto;
@@ -56,6 +58,11 @@ pub struct ForestConfig {
     pub protocol: String,
     pub network: String,
     pub denomination: U128,
+    pub asset_token_id: Option<AccountId>,
+    pub deposit_token_amount: Option<U128>,
+    pub withdrawal_token_fee: Option<U128>,
+    pub storage_credit_bond: U128,
+    pub prepaid_storage_liability: U128,
     pub fee_recipient: AccountId,
     pub deposit_fee_bps: u16,
     pub withdrawal_fee_bps: u16,
@@ -119,6 +126,7 @@ pub struct Record {
     pub block_height: u64,
     pub timestamp_ns: String,
     pub amount: U128,
+    pub asset_token_id: Option<AccountId>,
     pub protocol_fee_charged: U128,
     pub protocol_fee_earned: U128,
     pub storage_fee_charged: U128,
@@ -161,6 +169,8 @@ trait Callbacks {
 #[derive(PanicOnDefault)]
 pub struct Forest {
     network: String,
+    token_id: Option<AccountId>,
+    storage_credits: ft::StorageCredits,
     denomination: u128,
     fee_recipient: AccountId,
     verification_key: Vec<u8>,
@@ -242,6 +252,8 @@ impl Forest {
         roots.insert(&nodes[0]);
         Self {
             network,
+            token_id: None,
+            storage_credits: ft::StorageCredits::new(),
             denomination: denomination.0,
             fee_recipient,
             verification_key: verification_key.0,
@@ -266,9 +278,106 @@ impl Forest {
         }
     }
 
+    #[init]
+    #[payable]
+    pub fn new_ft(
+        network: String,
+        denomination: U128,
+        verification_key: Base64VecU8,
+        fee_recipient: AccountId,
+        token_id: AccountId,
+    ) -> Self {
+        require!(
+            token_id != env::current_account_id(),
+            "Invalid token contract"
+        );
+        require!(
+            fees::withdrawal_fee(denomination.0) > 0,
+            "FT denomination fee rounds to zero"
+        );
+        let mut forest = Self::new(network, denomination, verification_key, fee_recipient);
+        forest.domain = sha_field(&format!(
+            "core:ft:v3|{}|{}|{}|{}",
+            forest.network,
+            env::current_account_id(),
+            token_id,
+            forest.denomination
+        ));
+        forest.token_id = Some(token_id);
+        forest
+    }
+    #[payable]
+    pub fn prepay_storage(&mut self, account_id: Option<AccountId>) -> ft::Credit {
+        require!(self.token_id.is_some(), "FT group only");
+        self.storage_credits
+            .prepay(account_id.unwrap_or_else(env::predecessor_account_id))
+    }
+    pub fn get_storage_credit(&self, account_id: AccountId) -> Option<ft::Credit> {
+        self.storage_credits.view(&account_id)
+    }
+    #[payable]
+    pub fn withdraw_storage_credit(&mut self) -> Promise {
+        self.solvent();
+        self.storage_credits.withdraw()
+    }
+    #[private]
+    pub fn on_storage_refund(
+        &mut self,
+        account: AccountId,
+        amount: U128,
+        #[callback_result] result: Result<(), PromiseError>,
+    ) -> bool {
+        self.storage_credits
+            .resolve(account, amount, result.is_ok())
+    }
+    /// Only the immutable token contract can charge a token fee and request a spend.
+    pub fn ft_on_transfer(&mut self, sender_id: AccountId, amount: U128, msg: String) -> U128 {
+        require!(
+            self.token_id.as_ref() == Some(&env::predecessor_account_id()),
+            "Untrusted FT contract"
+        );
+        require!(msg.len() <= 4096, "Withdrawal message too large");
+        require!(
+            amount.0 == fees::withdrawal_fee(self.denomination),
+            "Transfer exact add-on withdrawal token fee"
+        );
+        require!(
+            env::prepaid_gas() >= Gas::from_tgas(200),
+            "Insufficient FT withdrawal gas"
+        );
+        let input: FtWithdrawal =
+            near_sdk::serde_json::from_str(&msg).expect("Invalid withdrawal message");
+        self.storage_credits.consume(&sender_id);
+        self.request_withdrawal(
+            input.vault,
+            input.recipient,
+            input.disclosure_root,
+            input.proof,
+            input.public_inputs,
+        )
+        .detach();
+        U128(0)
+    }
+
     pub fn get_config(&self) -> ForestConfig {
         ForestConfig {
-            protocol: "core-shared-registry-v2".into(),
+            protocol: if self.token_id.is_some() {
+                "core-shared-ft-registry-v3"
+            } else {
+                "core-shared-registry-v2"
+            }
+            .into(),
+            asset_token_id: self.token_id.clone(),
+            deposit_token_amount: self
+                .token_id
+                .as_ref()
+                .map(|_| U128(self.denomination + fees::deposit_fee(self.denomination))),
+            withdrawal_token_fee: self
+                .token_id
+                .as_ref()
+                .map(|_| U128(fees::withdrawal_fee(self.denomination))),
+            storage_credit_bond: U128(ft::STORAGE_CREDIT_BOND),
+            prepaid_storage_liability: U128(self.storage_credits.liability),
             network: self.network.clone(),
             denomination: U128(self.denomination),
             fee_recipient: self.fee_recipient.clone(),
@@ -291,10 +400,16 @@ impl Forest {
             outstanding_notes: self.outstanding,
             record_count: self.records.len(),
             storage_fee: U128(STORAGE),
-            deposit_attached: U128(
-                self.denomination + fees::deposit_fee(self.denomination) + STORAGE,
-            ),
-            withdrawal_attached: U128(fees::withdrawal_fee(self.denomination) + STORAGE),
+            deposit_attached: U128(if self.token_id.is_some() {
+                STORAGE
+            } else {
+                self.denomination + fees::deposit_fee(self.denomination) + STORAGE
+            }),
+            withdrawal_attached: U128(if self.token_id.is_some() {
+                STORAGE
+            } else {
+                fees::withdrawal_fee(self.denomination) + STORAGE
+            }),
             withdrawal_received: U128(self.denomination),
             pending_withdrawal_fees: U128(self.pending_fees),
             accrued_protocol_fees: U128(self.earned_fees),
@@ -375,7 +490,7 @@ impl Forest {
         );
         self.emit("vault_requested", index);
         let args = near_sdk::serde_json::to_vec(&near_sdk::serde_json::json!({
-            "network": self.network, "denomination": U128(self.denomination), "registry": env::current_account_id(), "fee_recipient": self.fee_recipient
+            "network": self.network, "denomination": U128(self.denomination), "registry": env::current_account_id(), "fee_recipient": self.fee_recipient, "token_id": self.token_id
         })).expect("Initialization arguments");
         // Never add any full-access or function-call key to the child.
         Promise::new(account_id)
@@ -383,7 +498,11 @@ impl Forest {
             .transfer(NearToken::from_yoctonear(self.funding - INIT_RESERVE))
             .deploy_contract(VAULT_WASM.to_vec())
             .function_call(
-                "new",
+                if self.token_id.is_some() {
+                    "new_ft"
+                } else {
+                    "new"
+                },
                 args,
                 NearToken::from_yoctonear(INIT_RESERVE),
                 Gas::from_tgas(80),
@@ -443,9 +562,13 @@ impl Forest {
                 >= stake
                     + self.refund_liability
                     + self.pending_funding
-                    + self.pending_fees
-                    + self.earned_fees
-                    + self.fees_in_flight,
+                    + (if self.token_id.is_none() {
+                        self.pending_fees + self.earned_fees + self.fees_in_flight
+                    } else {
+                        0
+                    })
+                    + self.storage_credits.liability
+                    + 1,
             "Protocol refunds have not settled; retry later"
         );
         let amount = refund.available;
@@ -625,49 +748,11 @@ impl Forest {
             env::prepaid_gas() >= Gas::from_tgas(240),
             "Attach at least 240 Tgas"
         );
-        let (index, mut v) = self.ready_vault(&vault);
         require!(
-            v.available_notes > 0,
-            "Selected vault has no available liquidity"
+            self.token_id.is_none(),
+            "Use ft_transfer_call for FT withdrawals"
         );
-        require!(
-            recipient != env::current_account_id() && self.indexes.get(&recipient).is_none(),
-            "Recipient cannot be the registry or a vault"
-        );
-        Self::receipt(&disclosure_root);
-        let nf = self.check_spend(
-            "withdraw",
-            vault.as_str(),
-            recipient.as_str(),
-            &disclosure_root,
-            &proof.0,
-            &public_inputs,
-        );
-        let start = env::storage_usage();
-        self.spent.insert(&nf);
-        v.available_notes -= 1;
-        v.reserved_notes += 1;
-        self.vaults.replace(index, &v);
-        self.pending_fees += fees::withdrawal_fee(self.denomination);
-        let w = Withdrawal {
-            vault: vault.clone(),
-            recipient: recipient.clone(),
-            disclosure_root: disclosure_root.clone(),
-            state: WithdrawalState::Pending,
-            attempt: 1,
-            last_height: env::block_height(),
-        };
-        self.withdrawals.insert(&nf, &w);
-        self.record(
-            "withdrawal_requested",
-            None,
-            Some(decimal(&nf)),
-            Some(vault),
-            Some(recipient),
-            disclosure_root,
-        );
-        self.storage_covered(start, REGISTRY_STORAGE, 384);
-        self.dispatch(nf, w)
+        self.request_withdrawal(vault, recipient, disclosure_root, proof, public_inputs)
     }
 
     // Never releases the nullifier or redirects payout. A lost callback can be resumed idempotently.
@@ -762,13 +847,11 @@ impl Forest {
         let amount = self.earned_fees;
         self.earned_fees = 0;
         self.fees_in_flight = amount;
-        Promise::new(self.fee_recipient.clone())
-            .transfer(NearToken::from_yoctonear(amount))
-            .then(
-                ext_self::ext(env::current_account_id())
-                    .with_static_gas(Gas::from_tgas(20))
-                    .on_fees(U128(amount)),
-            )
+        ft::send(&self.token_id, self.fee_recipient.clone(), amount).then(
+            ext_self::ext(env::current_account_id())
+                .with_static_gas(Gas::from_tgas(20))
+                .on_fees(U128(amount)),
+        )
     }
     #[private]
     pub fn on_fees(
@@ -789,6 +872,58 @@ impl Forest {
 }
 
 impl Forest {
+    fn request_withdrawal(
+        &mut self,
+        vault: AccountId,
+        recipient: AccountId,
+        disclosure_root: String,
+        proof: Base64VecU8,
+        public_inputs: Vec<String>,
+    ) -> Promise {
+        let (index, mut v) = self.ready_vault(&vault);
+        require!(
+            v.available_notes > 0,
+            "Selected vault has no available liquidity"
+        );
+        require!(
+            recipient != env::current_account_id() && self.indexes.get(&recipient).is_none(),
+            "Recipient cannot be the registry or a vault"
+        );
+        Self::receipt(&disclosure_root);
+        let nf = self.check_spend(
+            "withdraw",
+            vault.as_str(),
+            recipient.as_str(),
+            &disclosure_root,
+            &proof.0,
+            &public_inputs,
+        );
+        let start = env::storage_usage();
+        self.spent.insert(&nf);
+        v.available_notes -= 1;
+        v.reserved_notes += 1;
+        self.vaults.replace(index, &v);
+        self.pending_fees += fees::withdrawal_fee(self.denomination);
+        let w = Withdrawal {
+            vault: vault.clone(),
+            recipient: recipient.clone(),
+            disclosure_root: disclosure_root.clone(),
+            state: WithdrawalState::Pending,
+            attempt: 1,
+            last_height: env::block_height(),
+        };
+        self.withdrawals.insert(&nf, &w);
+        self.record(
+            "withdrawal_requested",
+            None,
+            Some(decimal(&nf)),
+            Some(vault),
+            Some(recipient),
+            disclosure_root,
+        );
+        self.storage_covered(start, REGISTRY_STORAGE, 384);
+        self.dispatch(nf, w)
+    }
     fn ready_vault(&self, account: &AccountId) -> (u64, VaultRecord) {
         let index = self.indexes.get(account).expect("Unregistered vault");
         let record = self.vaults.get(index).expect("Vault");
@@ -826,7 +961,12 @@ impl Forest {
         require!(fields[4] == self.domain, "Wrong shared domain");
         require!(self.roots.contains(&fields[2]), "Unknown global root");
         let context = sha_field(&format!(
-            "core:action:v2|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}",
+            if self.token_id.is_some() {
+                "core:action:ft:v3"
+            } else {
+                "core:action:v2"
+            },
             decimal(&self.domain),
             kind,
             vault,
@@ -874,9 +1014,13 @@ impl Forest {
                 >= stake
                     + self.refund_liability
                     + self.pending_funding
-                    + self.pending_fees
-                    + self.earned_fees
-                    + self.fees_in_flight,
+                    + (if self.token_id.is_none() {
+                        self.pending_fees + self.earned_fees + self.fees_in_flight
+                    } else {
+                        0
+                    })
+                    + self.storage_credits.liability
+                    + 1,
             "Insufficient registry reserve; retry after refunds settle"
         );
     }
@@ -918,13 +1062,14 @@ impl Forest {
             block_height: env::block_height(),
             timestamp_ns: env::block_timestamp().to_string(),
             amount: U128(self.denomination),
+            asset_token_id: self.token_id.clone(),
             protocol_fee_charged: U128(charged),
             protocol_fee_earned: U128(earned),
             storage_fee_charged: U128(storage),
         };
         env::log_str(&format!(
             "EVENT_JSON:{}",
-            near_sdk::serde_json::json!({ "standard": "core_shared", "version": "2.0.0", "event": kind, "data": [&record] })
+            near_sdk::serde_json::json!({ "standard": "core_shared", "version": if self.token_id.is_some() { "3.0.0" } else { "2.0.0" }, "event": kind, "data": [&record] })
         ));
         self.records.push(&record);
     }
@@ -937,6 +1082,15 @@ impl Forest {
             })
         ));
     }
+}
+
+#[near(serializers = [json])]
+struct FtWithdrawal {
+    vault: AccountId,
+    recipient: AccountId,
+    disclosure_root: String,
+    proof: Base64VecU8,
+    public_inputs: Vec<String>,
 }
 
 #[cfg(test)]

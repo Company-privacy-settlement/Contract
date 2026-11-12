@@ -1,5 +1,7 @@
 #[path = "../../pool/src/fees.rs"]
 mod fees;
+#[path = "../../common/ft.rs"]
+mod ft;
 use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U128;
 use near_sdk::{
@@ -81,6 +83,8 @@ trait Callbacks {
 #[derive(PanicOnDefault)]
 pub struct Vault {
     registry: AccountId,
+    token_id: Option<AccountId>,
+    storage_credits: ft::StorageCredits,
     network: String,
     denomination: u128,
     fee_recipient: AccountId,
@@ -130,6 +134,8 @@ impl Vault {
         );
         Self {
             registry,
+            token_id: None,
+            storage_credits: ft::StorageCredits::new(),
             network,
             denomination: denomination.0,
             fee_recipient,
@@ -146,11 +152,102 @@ impl Vault {
         }
     }
 
+    /// New immutable FT group; callers must register vault/recipients on the FT contract.
+    #[init]
+    #[payable]
+    pub fn new_ft(
+        registry: AccountId,
+        network: String,
+        denomination: U128,
+        fee_recipient: AccountId,
+        token_id: AccountId,
+    ) -> Self {
+        require!(
+            token_id != registry && token_id != env::current_account_id(),
+            "Invalid token contract"
+        );
+        require!(
+            fees::withdrawal_fee(denomination.0) > 0,
+            "FT denomination fee rounds to zero"
+        );
+        let mut vault = Self::new(registry, network, denomination, fee_recipient);
+        vault.token_id = Some(token_id);
+        vault
+    }
+    #[payable]
+    pub fn prepay_storage(&mut self, account_id: Option<AccountId>) -> ft::Credit {
+        require!(self.token_id.is_some(), "FT group only");
+        self.storage_credits
+            .prepay(account_id.unwrap_or_else(env::predecessor_account_id))
+    }
+    pub fn get_storage_credit(&self, account_id: AccountId) -> Option<ft::Credit> {
+        self.storage_credits.view(&account_id)
+    }
+    #[payable]
+    pub fn withdraw_storage_credit(&mut self) -> Promise {
+        self.solvent();
+        self.storage_credits.withdraw()
+    }
+    #[private]
+    pub fn on_storage_refund(
+        &mut self,
+        account: AccountId,
+        amount: U128,
+        #[callback_result] result: Result<(), PromiseError>,
+    ) -> bool {
+        self.storage_credits
+            .resolve(account, amount, result.is_ok())
+    }
+    /// Accept synchronously. Never return the registry promise to the FT resolver: a lost
+    /// callback must not refund tokens after the registry has already minted a note.
+    pub fn ft_on_transfer(&mut self, sender_id: AccountId, amount: U128, msg: String) -> U128 {
+        require!(
+            self.token_id.as_ref() == Some(&env::predecessor_account_id()),
+            "Untrusted FT contract"
+        );
+        require!(msg.len() <= 512, "Deposit message too large");
+        let input: FtDeposit =
+            near_sdk::serde_json::from_str(&msg).expect("Invalid deposit message");
+        field(&input.commitment);
+        receipt(&input.disclosure_root);
+        require!(input.commitment != "0", "Empty commitment");
+        require!(
+            amount.0 == self.denomination + fees::deposit_fee(self.denomination),
+            "Transfer principal plus add-on token fee"
+        );
+        require!(
+            env::prepaid_gas() >= Gas::from_tgas(140),
+            "Insufficient FT deposit gas"
+        );
+        if self.deposits.get(&input.commitment).is_some() || self.held >= 256 {
+            return amount;
+        }
+        self.storage_credits.consume(&sender_id);
+        let start = env::storage_usage();
+        self.deposits.insert(
+            &input.commitment,
+            &Deposit {
+                owner: sender_id,
+                disclosure_root: input.disclosure_root.clone(),
+                state: DepositState::Pending,
+                attempt: 1,
+                last_height: env::block_height(),
+            },
+        );
+        self.pending += 1;
+        self.held += 1;
+        self.pending_fees += fees::deposit_fee(self.denomination);
+        self.storage_covered(start);
+        self.register(input.commitment, input.disclosure_root, 1)
+            .detach();
+        U128(0)
+    }
+
     pub fn get_config(&self) -> near_sdk::serde_json::Value {
-        near_sdk::serde_json::json!({ "protocol": "core-shared-vault-v2", "registry": self.registry, "network": self.network,
+        near_sdk::serde_json::json!({ "protocol": if self.token_id.is_some() { "core-shared-ft-vault-v3" } else { "core-shared-vault-v2" }, "asset_token_id": self.token_id, "storage_credit_bond": U128(ft::STORAGE_CREDIT_BOND), "prepaid_storage_liability": U128(self.storage_credits.liability), "deposit_token_amount": self.token_id.as_ref().map(|_| U128(self.denomination + fees::deposit_fee(self.denomination))), "registry": self.registry, "network": self.network,
             "denomination": U128(self.denomination), "fee_recipient": self.fee_recipient, "storage_fee": U128(STORAGE),
             "deposit_fee_bps": fees::DEPOSIT_FEE_BPS, "withdrawal_fee_bps": fees::WITHDRAWAL_FEE_BPS,
-            "deposit_attached": U128(self.denomination + fees::deposit_fee(self.denomination) + STORAGE),
+            "deposit_attached": U128(if self.token_id.is_some() { STORAGE } else { self.denomination + fees::deposit_fee(self.denomination) + STORAGE }),
             "withdrawal_received": U128(self.denomination), "available_notes": self.available, "reserved_notes": self.reserved,
             "pending_deposits": self.pending, "held_notes": self.held, "pending_deposit_fees": U128(self.pending_fees),
             "accrued_protocol_fees": U128(self.earned_fees), "fee_payout_in_flight": U128(self.fees_in_flight), "refund_liability": U128(self.refund_liability) })
@@ -164,6 +261,10 @@ impl Vault {
 
     #[payable]
     pub fn deposit(&mut self, commitment: String, disclosure_root: String) -> Promise {
+        require!(
+            self.token_id.is_none(),
+            "Use ft_transfer_call for FT deposits"
+        );
         field(&commitment);
         receipt(&disclosure_root);
         require!(
@@ -253,6 +354,7 @@ impl Vault {
         }
         self.deposits.insert(&commitment, &d);
         emit(
+            &self.token_id,
             "deposit_status",
             near_sdk::serde_json::json!({ "commitment": commitment, "state": d.state }),
         );
@@ -310,8 +412,7 @@ impl Vault {
         }
         self.storage_covered(start);
         self.solvent();
-        Promise::new(recipient)
-            .transfer(NearToken::from_yoctonear(self.denomination))
+        ft::send(&self.token_id, recipient, self.denomination)
             .then(
                 callback::ext(env::current_account_id())
                     .with_static_gas(Gas::from_tgas(20))
@@ -338,6 +439,7 @@ impl Vault {
         };
         self.payouts.insert(&nullifier, &p);
         emit(
+            &self.token_id,
             "vault_payout_status",
             near_sdk::serde_json::json!({ "nullifier": nullifier, "state": p.state, "recipient": p.recipient, "amount": U128(self.denomination) }),
         );
@@ -358,15 +460,16 @@ impl Vault {
         self.solvent();
         d.state = DepositState::RefundInFlight;
         self.deposits.insert(&commitment, &d);
-        Promise::new(d.owner)
-            .transfer(NearToken::from_yoctonear(
-                self.denomination + fees::deposit_fee(self.denomination),
-            ))
-            .then(
-                callback::ext(env::current_account_id())
-                    .with_static_gas(Gas::from_tgas(20))
-                    .on_refund(commitment),
-            )
+        ft::send(
+            &self.token_id,
+            d.owner,
+            self.denomination + fees::deposit_fee(self.denomination),
+        )
+        .then(
+            callback::ext(env::current_account_id())
+                .with_static_gas(Gas::from_tgas(20))
+                .on_refund(commitment),
+        )
     }
     #[private]
     pub fn on_refund(
@@ -405,13 +508,11 @@ impl Vault {
         let amount = self.earned_fees;
         self.earned_fees = 0;
         self.fees_in_flight = amount;
-        Promise::new(self.fee_recipient.clone())
-            .transfer(NearToken::from_yoctonear(amount))
-            .then(
-                callback::ext(env::current_account_id())
-                    .with_static_gas(Gas::from_tgas(20))
-                    .on_fees(U128(amount)),
-            )
+        ft::send(&self.token_id, self.fee_recipient.clone(), amount).then(
+            callback::ext(env::current_account_id())
+                .with_static_gas(Gas::from_tgas(20))
+                .on_fees(U128(amount)),
+        )
     }
     #[private]
     pub fn on_fees(
@@ -458,16 +559,27 @@ impl Vault {
             (env::storage_usage() as u128 + 32_768) * env::storage_byte_cost().as_yoctonear();
         require!(
             env::account_balance().as_yoctonear()
-                >= principal
-                    + self.pending_fees
-                    + self.refund_liability
-                    + self.earned_fees
-                    + self.fees_in_flight
-                    + stake,
+                >= (if self.token_id.is_none() {
+                    principal
+                        + self.pending_fees
+                        + self.refund_liability
+                        + self.earned_fees
+                        + self.fees_in_flight
+                } else {
+                    0
+                }) + self.storage_credits.liability
+                    + stake
+                    + 1,
             "Insufficient vault reserve; retry after refunds settle"
         );
     }
 }
+#[near(serializers = [json])]
+struct FtDeposit {
+    commitment: String,
+    disclosure_root: String,
+}
+
 fn receipt(value: &str) {
     require!(
         value.len() == 64
@@ -488,10 +600,11 @@ fn field(value: &str) {
         "Invalid field encoding"
     );
 }
-fn emit(event: &str, data: near_sdk::serde_json::Value) {
+fn emit(token_id: &Option<AccountId>, event: &str, mut data: near_sdk::serde_json::Value) {
+    data["asset_token_id"] = near_sdk::serde_json::json!(token_id);
     env::log_str(&format!(
         "EVENT_JSON:{}",
-        near_sdk::serde_json::json!({ "standard": "core_shared", "version": "2.0.0", "event": event, "data": [data] })
+        near_sdk::serde_json::json!({ "standard": "core_shared", "version": if token_id.is_some() { "3.0.0" } else { "2.0.0" }, "event": event, "data": [data] })
     ));
 }
 
