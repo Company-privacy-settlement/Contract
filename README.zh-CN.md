@@ -1,6 +1,6 @@
 # Contract
 
-[한국어](README.md) · [简体中文](README.zh-CN.md) · [English](README.en.md)
+[English](README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
 这是 NEAR 隐私结算协议的**智能合约与 ZK 电路仓库**。钱包 SDK、CLI 和服务器集成代码单独存放在 [Core](https://github.com/Company-privacy-settlement/Core) 中。
 
