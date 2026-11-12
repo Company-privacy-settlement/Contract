@@ -55,6 +55,14 @@ Protocol rates remain 15 bps on top of principal, rounded down in yoctoNEAR. Tot
 
 Forest journal events use `standard: core_shared`, `version: 2.0.0`, and identify the public payout/registration vault. They include principal, charged fee, earned fee and storage charge separately. Retried payout records carry zero new protocol fee. The SDK's v2 evidence bundle verifies finalized registry receipts and journal entries without assuming that all transactions were disclosed or that input/output notes are publicly linked.
 
+## Privacy boundaries
+
+Principal does not follow an A → B → C route. Private transfers update shared commitments without moving vault backing; one chosen funded vault pays the bound recipient directly. Deploying more vaults distributes custody but does not itself increase the number of independent participants or guarantee an effective anonymity set. The shared forest still coordinates membership and global nullifiers.
+
+Groth16 does not name the spent input commitment in a withdrawal. Public observers still see commitments, funding, vaults, signers, recipients, amounts, timing, nullifiers and disclosure references. Address reuse and small groups can correlate payments. New Core invoice terms v2 derive a separate signed reference per payment unit rather than reuse one common invoice root. This requires no ABI, circuit or note-domain change. Invoice references, deadlines and unit caps are not on-chain reservations: distinct nullifiers may pay the same reference, and clients must report actual payments honestly. Existing v1 invoice roots remain valid.
+
+See [Core’s privacy model](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md) for the API/link-holder boundary, selected evidence and invoice reconciliation limits.
+
 ## Limits
 
 Shared cryptographic membership does not guarantee network anonymity. Timing, small participant counts, public recipients, fixed amounts, funding patterns, relayer identities and disclosed receipt fields can reduce privacy. Groups and v1 pools have separate domains and are not private bridges to each other. Network labels are configuration, not automatic detection of the underlying chain. This is a single-machine trusted setup for local/testnet development, not an audited production deployment.

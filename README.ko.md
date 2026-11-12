@@ -2,6 +2,8 @@
 
 [English](README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
+공유 노트로 한 지급 볼트에서 수취인에게 직접 지급하며 원금이 여러 볼트를 연속 경유하지 않습니다. 공개 메타데이터로 지급을 연결할 수 있으므로 볼트 수 증가만으로 익명성을 보장하지 않습니다. Core 인보이스 v2는 기존 계약 ABI·회로에 결제 단위별 다른 공개 참조를 사용합니다. 참조 재사용 방지는 앱의 검사이며 계약의 예약 기능은 아닙니다. [프라이버시 한계](docs/SHARED.md#privacy-boundaries)를 참고하세요.
+
 NEAR 프라이버시 정산 프로토콜의 **계약·ZK 회로 저장소**입니다. 지갑 SDK·CLI·서버 연동 코드는 [Core](https://github.com/Company-privacy-settlement/Core)에 분리합니다.
 
 | 구성 | 역할 |

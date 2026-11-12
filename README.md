@@ -2,6 +2,8 @@
 
 [English](README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
+Shared notes authorize a direct payment from one funded vault; principal does not hop through a sequence of vaults. Public metadata can still correlate payouts, and adding vaults alone is not an anonymity guarantee. Core invoice terms v2 use different per-payment disclosure references with the existing contract ABI/circuit. Reference uniqueness is an application check, not a contract reservation. See [privacy boundaries](docs/SHARED.md#privacy-boundaries).
+
 The **smart contract and ZK circuit repository** for the NEAR privacy settlement protocol. Wallet SDK, CLI, and server integration code live separately in [Core](https://github.com/Company-privacy-settlement/Core).
 
 | Component | Role |

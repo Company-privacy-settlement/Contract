@@ -2,6 +2,8 @@
 
 [English](README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
+共享票据授权一个有流动性的金库直接向收款人付款，本金不会连续经过多个金库。公开元数据仍可关联付款，增加金库本身不保证匿名性。Core 发票条款 v2 使用现有合约 ABI 和电路，为每个付款单位提供不同引用。引用复用检查属于应用层，不是合约预留功能。参见[隐私边界](docs/SHARED.md#privacy-boundaries)。
+
 这是 NEAR 隐私结算协议的**智能合约与 ZK 电路仓库**。钱包 SDK、CLI 和服务器集成代码单独存放在 [Core](https://github.com/Company-privacy-settlement/Core) 中。
 
 | 组件 | 职责 |
