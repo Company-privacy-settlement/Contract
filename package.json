@@ -1,0 +1,30 @@
+{
+  "name": "@company-privacy-settlement/contracts",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build-contract.mjs",
+    "test:pool": "cargo test --locked --manifest-path contracts/pool/Cargo.toml --target-dir target",
+    "test:factory": "cargo test --locked --manifest-path contracts/factory/Cargo.toml --target-dir target",
+    "test:shared-vault": "cargo test --locked --manifest-path contracts/shared-vault/Cargo.toml --target-dir target",
+    "test:forest": "cargo test --locked --manifest-path contracts/forest/Cargo.toml --target-dir target",
+    "test": "npm run test:pool && npm run test:factory && npm run test:shared-vault && npm run test:forest",
+    "zk:setup": "node scripts/setup-zk.mjs"
+  },
+  "devDependencies": {
+    "binaryen": "132.0.0",
+    "circom2": "0.2.23",
+    "circomlib": "2.0.5",
+    "circomlibjs": "0.1.7",
+    "snarkjs": "0.7.6"
+  },
+  "overrides": {
+    "bfj": "9.1.4",
+    "underscore": "1.13.8",
+    "ws": "8.22.2"
+  }
+}
