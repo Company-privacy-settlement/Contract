@@ -1,71 +1,87 @@
-# Contract
+# Contract — Core settlement on NEAR
 
 [English](README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
-Shared notes authorize a direct payment from one funded vault; principal does not hop through a sequence of vaults. Public metadata can still correlate payouts, and adding vaults alone is not an anonymity guarantee. Core invoice terms v2 use different per-payment disclosure references with the existing contract ABI/circuit. Reference uniqueness is an application check, not a contract reservation. See [privacy boundaries](docs/SHARED.md#privacy-boundaries).
+Smart contracts, Groth16 circuit, public vectors and reproducible WASM builds for Core’s private business settlement protocol. [Core](https://github.com/Company-privacy-settlement/Core) provides proving, SDK, read-only API and indexing; [Front](https://github.com/Company-privacy-settlement/Front) provides the English-first landing, Docs, wallet tools, signed invoices and evidence workspace.
 
-The **smart contract and ZK circuit repository** for the NEAR privacy settlement protocol. Wallet SDK, CLI, and server integration code live separately in [Core](https://github.com/Company-privacy-settlement/Core).
+[Service overview](https://github.com/Company-privacy-settlement/Core/blob/main/docs/SERVICE.md) · [Development roadmap](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ROADMAP.md) · [Web Docs](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/)
 
-| Component | Role |
+## Architecture and versions
+
+| Component | Responsibility |
 | --- | --- |
-| `contracts/forest` | Shared v2/v3 note tree, global nullifiers, payout reservations, and keyless vault creation |
-| `contracts/shared-vault` | Distributed v2/v3 principal custody, deposit registration, idempotent payouts, and failure refunds |
+| `contracts/forest` | Shared note tree, global nullifiers, payout reservations and keyless vault creation |
+| `contracts/shared-vault` | Independent principal custody, deposit registration, idempotent payouts and failure refunds |
 | `contracts/pool`, `contracts/factory` | Compatible v1 independent pools and factory |
-| `circuits/spend.circom` | Real Groth16 circuit binding Poseidon membership, nullifiers, and the payout context |
+| `circuits/spend.circom` | Poseidon membership, nullifiers and destination/context binding with real Groth16 proofs |
 
-V2 **shares an anonymity set without pooling principal**. Deposits remain in individual vaults; the forest coordinates shared proof state. A note deposited in A can withdraw from B's available liquidity, and the same nullifier can be spent only once across all vaults. Registration, withdrawal, and retry operations require no operator signature.
+V2 uses native NEAR. V3 pins one NEP-141 token, including native USDC, per group and binds it into the proof domain. V1 remains an independent-pool compatibility path. V1/v2 share the membership circuit but use different domains/action bindings; notes and policies cannot be interchanged arbitrarily.
+
+Principal stays in individual vaults. Shared notes authorize a direct payout from one funded vault, including a vault different from the deposit vault. The forest coordinates proof state and reserves liquidity; it has no principal-sweep authority. There is no sequence of principal hops. Operations require no operator signature, and deployment adds no keys to child contracts. Public recipients, signers, amounts, vaults, references and timing remain visible; more vaults alone do not guarantee anonymity.
+
+Each group has a fixed denomination and depth-8 tree: **256 total outputs**, not 256 reusable slots. Deposits and private transfers consume capacity; withdrawals do not restore it. Groups remain separate proof/privacy domains. [Shared specification](docs/SHARED.md) · [Privacy boundaries](docs/SHARED.md#privacy-boundaries).
 
 ## Build and test
 
-Requires Node.js 22+, the pinned Rust 1.99.1 toolchain, and C/C++ build tools.
+Requires Node.js 22+, pinned Rust 1.99.1, the WASM target and C/C++ build tools. Run from this repository.
 
-```bash
+```sh
 npm ci
 rustup target add wasm32-unknown-unknown
 npm run build
 npm test
 ```
 
-Build order is `pool → factory → shared-vault → forest`. The factory and forest embed the optimized child vault WASM. Outputs are `artifacts/core_pool.wasm`, `core_factory.wasm`, `core_shared_vault.wasm`, `core_forest.wasm`, and `build-manifest.json`. Build before running contract tests. Deployment actions do not add keys to child contracts.
+Build order is pool → factory → shared-vault → forest; parent contracts embed optimized child WASM. Outputs in `artifacts/` include `core_pool.wasm`, `core_factory.wasm`, `core_shared_vault.wasm`, `core_forest.wasm` and `build-manifest.json`. Build before contract tests. Core verifies artifact hashes before copying them.
 
-```bash
-# Single-machine development setup. A new setup requires a new verifier and deployment.
+```sh
+# Single-machine development setup; a new setup needs a new verifier and deployment.
 npm run zk:setup
 ```
 
-Test vectors contain only public proofs and verification keys. Secret notes, private keys, and generated proving artifacts are not committed. V1 and v2 use the same membership circuit but **different domains and action bindings**.
+Only public proofs, verification keys and vectors are committed. Secret notes, private keys and generated proving artifacts must remain untracked. This development setup is not a reviewed multi-party ceremony.
 
-## Local-chain validation
+## End-to-end local chain
 
-Check out both repositories as siblings. Core verifies the SHA-256 hashes of Contract build artifacts before copying them.
+Check out `Contract/` and `Core/` as siblings. From Contract:
 
-```text
-workspace/
-  Contract/
-  Core/
-```
-
-```bash
+```sh
 cd ../Core
 npm ci
 npm run contract:build
 npm run zk:setup
-npm run demo:shared
+(cd ../Contract && npm run build:test-ft)
+npm run demo:ft
 ```
 
-`demo:shared` validates three deposits across two keyless vaults, an A-origin note withdrawing from B, concurrent double-spend prevention across two destinations, failed payouts to a nonexistent recipient and subsequent retries, 0.15% fee accounting, and 12 finalized journal records. Administrator keys are removed only in the disposable local chain; public-network deployment and key removal are not performed automatically.
+Core supports a different contract checkout through `CORE_CONTRACT_REPO`. The FT sandbox uses real WASM and Groth16 proofs with a local **TESTUSD fixture, not Circle USDC**. The latest recorded run on 2026-11-13 produced 14 finalized records and covered fees/recovery, API/index/journal operations, recipient readiness, browser note/receipt backups and finalized evidence anchoring. `npm run demo:shared` in Core exercises native NEAR v2, cross-vault payouts, concurrent double-spend rejection and failed-recipient retries. These disposable-chain demos do not deploy a public network or prove a real-wallet smoke test.
 
-## USDC support
+## Assets and additive fees
 
-Use `new_ft` to create a new group pinned to a USDC token contract. Depositing 1 USDC sends **1.0015 USDC**; withdrawal pays a separate **0.0015 USDC** fee, while the recipient receives the **full 1 USDC**. NEAR gas and storage are accounted for separately. Principal stays in each vault's token balance; only withdrawal fees enter the forest. See the [USDC specification](docs/USDC.md) for Circle's native USDC addresses and test procedures. This implementation has not been deployed to a public network.
+Deposit and withdrawal each charge **0.15% on top of principal**, rounded down in asset atomic units. The recipient receives full principal.
 
-## Fees and scope
+| Fixed denomination | Deposit | Separate withdrawal payment | Recipient |
+| --- | --- | --- | --- |
+| 1 USDC | 1.0015 USDC | 0.0015 USDC | 1 USDC |
+| 1 NEAR, native v2 | 1.0215 NEAR including storage | 0.0215 NEAR including storage | 1 NEAR |
 
-Both deposits and withdrawals charge **an additional 0.15% of principal**. Recipients receive the full principal; 0.02 NEAR storage and gas are separate. V2 divides the storage charge between registry (0.015 NEAR) and vault (0.005 NEAR); this is not an extra charge. Retries pay storage only. Deposit fees accrue in the vault, and confirmed withdrawal fees accrue in the forest. Earned fees can be collected only to the fixed treasury. The forest has no principal-sweep authority.
+For FT groups, applicable action storage is 0.02 NEAR and first-use storage credit adds a 0.005 NEAR ledger bond per sender/target contract. Account activation, token registration, gas and FT transfer’s one-yocto attachment are separate. Native v2’s 0.02 NEAR storage splits into 0.015 registry + 0.005 vault; this is not an extra protocol fee. Retries/private transfers pay applicable storage, not another protocol fee. Deposit fees accrue in the vault; confirmed withdrawal fees accrue in the forest. Only earned fees can go to the fixed treasury; principal and pending liabilities are not treasury funds.
 
-This hackathon core supports native NEAR v2 and **USDC/NEP-141 v3**, fixed denominations, and a shared tree of depth 8 (256 total outputs). Each asset requires a separate forest; v3 also pins the token contract in the proof domain. Automatic private migration, variable amounts, cross-asset bridges, statutory tax filing, and real KYB review services are outside the implementation. The single-machine setup and circuits/contracts have not undergone a production audit and are intended for local/testnet demonstrations.
+`new_ft` creates a separate immutable-token group. Browser settlement currently supports configured testnet FT groups; native NEAR uses Core CLI. [USDC/NEP-141 specification and reference addresses](docs/USDC.md).
 
-- [USDC/NEP-141 v3: separate-currency fees, FT registration, and recovery](docs/USDC.md)
-- [Shared anonymity v2 and recovery specification](docs/SHARED.md)
+## Service integration and limits
+
+Core invoices v2 bind a distinct signed reference per payment unit using the existing ABI/circuit. Reference uniqueness, expiry and payment caps are application checks, not contract-enforced reservations. Concurrent payments and overpayments remain possible. An arbitrary receipt root cannot replace a signed invoice payment reference. Receipt integrity, finalized payment, KYB identity and tax acceptance are separate checks; no business names or tax documents need to be published on-chain.
+
+Browser note generation/encrypted backup and selected-field receipts are implemented in Core/Front; new Groth16 spend proofs remain CLI-based. KYB is sample intake plus separately configured SDK issuer-signature checks, not live provider review or circuit-enforced identity admission. US/Abu Dhabi tax preparation and AI drafts are planned service work, not contract functions.
+
+This development protocol has no production security audit, reviewed multi-party setup or funded public-network wallet validation. Permanently missing payout callbacks stay conservatively reserved; nullifiers must not be reset or destinations redirected to manufacture recovery. Variable denominations, automatic private group migration, cross-asset bridges, real KYB providers and statutory filings remain future work.
+
+## Specifications
+
+- [Shared native NEAR v2, recovery and privacy](docs/SHARED.md)
+- [USDC / NEP-141 v3](docs/USDC.md)
 - [Independent pool v1 proof format](docs/PROTOCOL.md)
 - [Independent factory v1](docs/FACTORY.md)
+- [Distributed vault model](docs/DISTRIBUTED_VAULTS.md)
+- [SDK/service privacy boundaries](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md)

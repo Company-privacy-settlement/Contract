@@ -1,5 +1,7 @@
 # Native USDC / NEP-141 shared settlement — v3
 
+[Service overview](https://github.com/Company-privacy-settlement/Core/blob/main/docs/SERVICE.md) · [Contract build and validation](../README.md)
+
 The shared forest and vault binaries support **either native NEAR v2 or one immutable NEP-141 token v3 per forest**. Initialize v3 with `new_ft`; native `new` retains the v2 wire protocol. A forest never mixes assets or denominations. This implementation remains sandbox/testnet development code; only sandbox/testnet configuration labels are accepted, and no public-network deployment is performed. A label does not detect the underlying chain; it is not a deployment-network security boundary.
 
 ## Token identity and units

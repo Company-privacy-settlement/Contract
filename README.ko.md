@@ -1,71 +1,87 @@
-# Contract
+# Contract — NEAR Core 정산
 
 [English](README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
-공유 노트로 한 지급 볼트에서 수취인에게 직접 지급하며 원금이 여러 볼트를 연속 경유하지 않습니다. 공개 메타데이터로 지급을 연결할 수 있으므로 볼트 수 증가만으로 익명성을 보장하지 않습니다. Core 인보이스 v2는 기존 계약 ABI·회로에 결제 단위별 다른 공개 참조를 사용합니다. 참조 재사용 방지는 앱의 검사이며 계약의 예약 기능은 아닙니다. [프라이버시 한계](docs/SHARED.md#privacy-boundaries)를 참고하세요.
+Core 프라이빗 기업 정산 프로토콜의 스마트 컨트랙트, Groth16 회로, 공개 벡터와 WASM 빌드 저장소입니다. [Core](https://github.com/Company-privacy-settlement/Core)는 증명·SDK·읽기 전용 API·인덱스, [Front](https://github.com/Company-privacy-settlement/Front)는 영문 기본 랜딩·Docs·지갑·서명 인보이스·증빙 화면을 담당합니다.
 
-NEAR 프라이버시 정산 프로토콜의 **계약·ZK 회로 저장소**입니다. 지갑 SDK·CLI·서버 연동 코드는 [Core](https://github.com/Company-privacy-settlement/Core)에 분리합니다.
+[서비스 개요](https://github.com/Company-privacy-settlement/Core/blob/main/docs/SERVICE.md) · [개발 로드맵](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ROADMAP.md) · [웹 Docs](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/)
 
-| 구성 | 역할 |
+## 구조와 버전
+
+| 구성 요소 | 역할 |
 | --- | --- |
-| `contracts/forest` | v2/v3 공통 노트 트리·전역 nullifier·지급 예약·keyless vault 생성 |
-| `contracts/shared-vault` | v2/v3 원금 분산 보관·입금 등록·멱등 지급·실패 환불 |
-| `contracts/pool`, `contracts/factory` | v1 독립 풀과 팩토리 호환 구현 |
-| `circuits/spend.circom` | Poseidon membership·nullifier·지급 컨텍스트를 묶는 실제 Groth16 회로 |
+| `contracts/forest` | 공유 노트 트리, 전역 nullifier, 지급 예약과 키 없는 볼트 생성 |
+| `contracts/shared-vault` | 분리된 원금 보관, 입금 등록, 멱등 지급과 실패 환불 |
+| `contracts/pool`, `contracts/factory` | v1 독립 풀·팩토리 호환 경로 |
+| `circuits/spend.circom` | 실제 Groth16의 Poseidon 멤버십·nullifier·목적지/컨텍스트 바인딩 |
 
-v2는 **원금을 모으지 않고 익명성 집합을 공유**합니다. 예치금은 각 vault에 남고, forest는 공통 증명 상태만 관리합니다. A에 예치한 노트로 B의 가용 잔액에서 출금할 수 있으며, 어느 vault를 골라도 같은 nullifier는 한 번만 사용됩니다. 등록·출금·재시도에는 운영자 서명이 필요하지 않습니다.
+v2는 네이티브 NEAR, v3는 그룹마다 네이티브 USDC 등 하나의 NEP-141 토큰을 고정하고 증명 도메인에 바인딩합니다. v1은 독립 풀 호환 경로입니다. v1/v2는 멤버십 회로를 공유해도 도메인·액션 바인딩이 달라 노트·정책을 임의 교환할 수 없습니다.
+
+원금은 개별 볼트에 남습니다. 공유 노트는 입금 볼트와 다른 볼트를 포함해 자금이 있는 한 볼트에서 직접 지급을 승인합니다. forest는 증명 상태·유동성 예약을 조정하며 원금 회수 권한은 없습니다. 원금을 여러 볼트에 순차 경유하지 않습니다. 작업에 운영자 서명이 필요 없고 자식 컨트랙트 배포에 키를 추가하지 않습니다. 공개 수취인·서명자·금액·볼트·참조·시간은 관찰 가능하며 볼트 수만으로 익명성을 보장하지 않습니다.
+
+각 그룹은 고정 금액과 깊이 8 트리인 **총 256개 출력**을 사용하며 재사용 슬롯 256개가 아닙니다. 입금·비공개 전송은 출력을 사용하고 출금해도 복구되지 않습니다. 그룹마다 증명·프라이버시 영역은 분리됩니다. [공유 명세](docs/SHARED.md) · [프라이버시 한계](docs/SHARED.md#privacy-boundaries).
 
 ## 빌드와 테스트
 
-Node.js 22+, 고정 Rust toolchain 1.99.1, C/C++ 빌드 도구가 필요합니다.
+Node.js 22 이상, 고정된 Rust 1.99.1, WASM 타깃과 C/C++ 빌드 도구가 필요합니다. 이 저장소에서 실행합니다.
 
-```bash
+```sh
 npm ci
 rustup target add wasm32-unknown-unknown
 npm run build
 npm test
 ```
 
-빌드는 `pool → factory → shared-vault → forest` 순서로 진행합니다. 팩토리와 forest는 각각 최적화된 자식 vault WASM을 포함합니다. 생성 파일은 `artifacts/core_pool.wasm`, `core_factory.wasm`, `core_shared_vault.wasm`, `core_forest.wasm`, `build-manifest.json`입니다. 테스트 전에 빌드가 필요합니다. 계약에 키를 추가하는 배포 액션은 없습니다.
+빌드는 pool → factory → shared-vault → forest 순이며 부모 컨트랙트는 최적화한 자식 WASM을 포함합니다. `artifacts/`에 `core_pool.wasm`, `core_factory.wasm`, `core_shared_vault.wasm`, `core_forest.wasm`, `build-manifest.json`이 생성됩니다. 컨트랙트 테스트 전에 빌드하며 Core는 복사 전에 해시를 검증합니다.
 
-```bash
-# 개발용 단일 머신 setup. 새 setup은 새 verifier와 새 배포가 필요합니다.
+```sh
+# 단일 머신 개발 셋업. 새 셋업에는 새 검증키와 배포가 필요합니다.
 npm run zk:setup
 ```
 
-검증 벡터에는 공개 증명과 공개 키만 포함합니다. 비밀 노트·개인키·생성된 proving artifacts는 커밋하지 않습니다. v1과 v2는 동일한 membership 회로를 사용하지만 **서로 다른 domain과 action binding**으로 구분됩니다.
+공개 증명·검증키·벡터만 커밋합니다. 비밀 노트·개인키·생성된 proving 아티팩트는 추적하지 않습니다. 이 개발 셋업은 검토된 다자간 ceremony가 아닙니다.
 
-## 실제 로컬 체인 검증
+## 로컬 체인 통합 검증
 
-두 저장소를 형제 폴더로 체크아웃합니다. Core가 Contract 빌드 산출물의 SHA-256을 확인하고 복사합니다.
+`Contract/`와 `Core/`를 형제 폴더로 체크아웃하고 Contract에서 실행합니다.
 
-```text
-workspace/
-  Contract/
-  Core/
-```
-
-```bash
+```sh
 cd ../Core
 npm ci
 npm run contract:build
 npm run zk:setup
-npm run demo:shared
+(cd ../Contract && npm run build:test-ft)
+npm run demo:ft
 ```
 
-`demo:shared`는 2개 keyless vault의 3개 예치, A 출처 노트의 B 출금, 두 목적지를 향한 동시 이중 사용 방지, 없는 수신자에 대한 지급 실패·재시도, 0.15% 수수료 정산과 12개 확정 journal 기록을 검증합니다. 일회용 로컬 체인에서만 관리자 키를 제거하며, 공개 네트워크 배포·키 제거는 자동 실행하지 않습니다.
+다른 컨트랙트 경로는 Core의 `CORE_CONTRACT_REPO`로 설정합니다. FT 샌드박스는 실제 WASM·Groth16과 **Circle USDC가 아닌 로컬 TESTUSD**를 사용합니다. 2026-11-13 최근 기록은 최종화 레코드 14개이며 수수료·복구, API·인덱스·저널, 수취인 준비, 브라우저 노트·영수증 백업과 최종 증빙 앵커를 다룹니다. Core의 `npm run demo:shared`는 네이티브 v2, 교차 볼트 지급, 동시 이중 지출 차단과 수취인 실패 재시도를 검증합니다. 일회성 체인 검증은 공개 네트워크 배포·실제 지갑 검증이 아닙니다.
 
-## USDC 지원
+## 자산과 추가 수수료
 
-`new_ft`로 고정 USDC 계약 주소를 지정한 새 그룹을 만듭니다. 1 USDC 입금 시 **1.0015 USDC**, 출금 시 별도 **0.0015 USDC**를 받고 수신자는 **1 USDC 전액**을 받습니다. NEAR 가스·스토리지는 별도 통화로 처리합니다. 원금은 각 vault의 토큰 잔액에 분산하며, forest에는 출금 수수료만 들어갑니다. 정식 Circle USDC 주소와 테스트 절차는 [USDC 명세](docs/USDC.md)를 확인하세요. 공개 네트워크에 실제 배포한 상태는 아닙니다.
+입금과 출금에 원금의 **0.15%를 각각 추가**하고 자산 최소 단위에서 내림합니다. 수취인은 원금을 전액 받습니다.
 
-## 수수료와 범위
+| 고정 단위 | 입금 | 별도 출금 지불 | 수취액 |
+| --- | --- | --- | --- |
+| 1 USDC | 1.0015 USDC | 0.0015 USDC | 1 USDC |
+| 네이티브 v2 1 NEAR | 스토리지 포함 1.0215 NEAR | 스토리지 포함 0.0215 NEAR | 1 NEAR |
 
-입금·출금 각각 원금의 0.15%를 **추가 납부**합니다. 출금자는 원금을 전액 받고, 보관 비용 0.02 NEAR와 가스는 별도입니다. v2 보관 비용은 registry 0.015 NEAR / vault 0.005 NEAR로 나누며 추가 청구가 아닙니다. 재시도는 보관 비용만 다시 냅니다. 입금 수수료는 해당 vault, 출금 수수료는 forest에서 확정 후 고정 treasury로만 회수할 수 있습니다. Forest에는 원금 회수 권한이 없습니다.
+FT 그룹 해당 작업 스토리지는 0.02 NEAR이며 송신자/대상 컨트랙트별 최초 크레딧에 0.005 NEAR 원장 보증금이 붙습니다. 계정 활성화·토큰 등록·가스·FT 전송의 1 yocto 첨부는 별도입니다. 네이티브 v2 스토리지 0.02 NEAR는 registry 0.015 + vault 0.005로 나뉘며 추가 프로토콜 수수료가 아닙니다. 재시도·비공개 전송은 해당 스토리지만 내고 프로토콜 수수료를 다시 내지 않습니다. 입금 수수료는 볼트, 확정 출금 수수료는 forest에 귀속됩니다. 고정 treasury는 수익 수수료만 수령하고 원금·지급 대기 부채를 인출할 수 없습니다.
 
-현재는 native NEAR v2와 **USDC/NEP-141 v3**를 지원하는 고정 denomination·공유 트리 깊이 8(총 output 256개)의 해커톤 코어입니다. 자산별 새 forest가 필요하며 v3는 토큰 계약 주소까지 증명 도메인에 고정합니다. 자동 비공개 마이그레이션, 가변 금액, cross-asset bridge, 법정 세무 신고, 실제 KYB 심사 서비스는 포함하지 않습니다. 단일 머신 setup과 새 회로/계약은 감사되지 않았으며 로컬·테스트넷 시연용입니다.
+`new_ft`로 토큰이 고정된 별도 그룹을 생성합니다. 브라우저는 현재 설정된 테스트넷 FT 그룹을 지원하고 네이티브 NEAR는 Core CLI를 사용합니다. [USDC/NEP-141 명세·참조 주소](docs/USDC.md).
 
-- [USDC/NEP-141 v3: 별도 통화 수수료·FT 등록·실패 복구](docs/USDC.md)
-- [공유 익명성 v2·실패 복구 명세](docs/SHARED.md)
-- [독립 풀 v1 증명 규격](docs/PROTOCOL.md)
+## 서비스 연동과 한계
+
+Core 인보이스 v2는 기존 ABI·회로로 결제 단위마다 다른 서명 참조를 바인딩합니다. 참조 중복·만료·결제 상한은 앱 검사이며 컨트랙트 예약이 아닙니다. 동시 결제·초과 입금이 가능합니다. 임의 영수증 루트로 서명된 인보이스 결제 참조를 교체할 수 없습니다. 영수증 무결성·최종 지급·KYB 신원·세무 인정은 별도 검사이며 기업명·세무 문서를 온체인에 공개할 필요는 없습니다.
+
+Core/Front는 브라우저 노트 생성·암호화 백업·선택 필드 증빙을 지원하지만 새 Groth16 지출 증명은 CLI에서 만듭니다. KYB는 샘플 입력과 별도로 구성한 SDK 발급자 서명 검사이며 실제 심사·회로 강제 신원 정책은 아닙니다. 미국/아부다비 세무 준비·AI 초안은 예정된 서비스 연동이며 컨트랙트 기능이 아닙니다.
+
+프로덕션 보안 감사·검토된 다자 셋업·자금이 있는 공개 네트워크 지갑 검증은 아직 없습니다. 영구 누락된 지급 콜백은 보수적으로 예약 상태를 유지하며 nullifier 초기화·목적지 변경으로 복구를 만들어내면 안 됩니다. 가변 금액·자동 비공개 그룹 이전·자산 간 브리지·실제 KYB·법정 신고는 향후 범위입니다.
+
+## 명세
+
+- [네이티브 NEAR 공유 v2·복구·프라이버시](docs/SHARED.md)
+- [USDC / NEP-141 v3](docs/USDC.md)
+- [독립 풀 v1 증명 형식](docs/PROTOCOL.md)
 - [독립 팩토리 v1](docs/FACTORY.md)
+- [분산 볼트 모델](docs/DISTRIBUTED_VAULTS.md)
+- [SDK/서비스 프라이버시](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md)

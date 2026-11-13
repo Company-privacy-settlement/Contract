@@ -1,5 +1,7 @@
 # Shared anonymity with distributed custody — v2
 
+[Service overview](https://github.com/Company-privacy-settlement/Core/blob/main/docs/SERVICE.md) · [Contract build and validation](../README.md)
+
 This page describes native NEAR v2. For token-bound USDC/NEP-141 v3, see [USDC.md](USDC.md).
 
 ## Trust and funds

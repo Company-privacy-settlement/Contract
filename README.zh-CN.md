@@ -1,71 +1,87 @@
-# Contract
+# Contract — NEAR Core 结算
 
 [English](README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
-共享票据授权一个有流动性的金库直接向收款人付款，本金不会连续经过多个金库。公开元数据仍可关联付款，增加金库本身不保证匿名性。Core 发票条款 v2 使用现有合约 ABI 和电路，为每个付款单位提供不同引用。引用复用检查属于应用层，不是合约预留功能。参见[隐私边界](docs/SHARED.md#privacy-boundaries)。
+Core 隐私企业结算协议的智能合约、Groth16 电路、公开向量及 WASM 构建仓库。[Core](https://github.com/Company-privacy-settlement/Core) 提供证明、SDK、只读 API 与索引；[Front](https://github.com/Company-privacy-settlement/Front) 提供默认英文的落地页、Docs、钱包、签名发票和证据工作区。
 
-这是 NEAR 隐私结算协议的**智能合约与 ZK 电路仓库**。钱包 SDK、CLI 和服务器集成代码单独存放在 [Core](https://github.com/Company-privacy-settlement/Core) 中。
+[服务概览](https://github.com/Company-privacy-settlement/Core/blob/main/docs/SERVICE.md) · [开发路线图](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ROADMAP.md) · [网页 Docs](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/)
+
+## 架构与版本
 
 | 组件 | 职责 |
 | --- | --- |
-| `contracts/forest` | v2/v3 共享票据树、全局 nullifier、付款预留和无密钥 vault 创建 |
-| `contracts/shared-vault` | v2/v3 本金分散保管、入金登记、幂等付款和失败退款 |
-| `contracts/pool`、`contracts/factory` | 兼容的 v1 独立池与工厂实现 |
-| `circuits/spend.circom` | 将 Poseidon 成员关系、nullifier 与付款上下文绑定的真实 Groth16 电路 |
+| `contracts/forest` | 共享票据树、全局 nullifier、付款预留及无密钥金库创建 |
+| `contracts/shared-vault` | 独立本金托管、存款登记、幂等支付与失败退款 |
+| `contracts/pool`, `contracts/factory` | 兼容 v1 独立池与工厂 |
+| `circuits/spend.circom` | 使用真实 Groth16 证明绑定 Poseidon 成员关系、nullifier 与目的地/上下文 |
 
-v2 **在不集中本金的前提下共享匿名集**。存入的资金留在各个 vault 中，forest 只协调共享证明状态。存入 A 的票据可以从 B 的可用流动性中提款；无论选择哪个 vault，同一个 nullifier 都只能使用一次。登记、提款和重试均不需要运营方签名。
+v2 使用原生 NEAR。v3 为每个分组固定一种 NEP-141 代币（包括原生 USDC），并绑定至证明域。v1 保留独立池兼容路径。v1/v2 共享成员电路，但域和操作绑定不同，票据与策略不可任意互换。
+
+本金保存在各独立金库。共享票据授权一个有余额的金库直接支付，可与原存款金库不同。forest 协调证明状态与流动性预留，没有归集本金权限。资金不会依次经过多个金库。操作无需运营者签名，子合约部署不会添加密钥。收款人、签名者、金额、金库、引用和时间仍公开；增加金库本身并不保证匿名性。
+
+每组使用固定面额和深度 8 的树：**总计 256 个输出**，并非可复用的 256 个槽位。存款及私密转移消耗容量，提款不会恢复容量。各分组仍是独立的证明/隐私域。[共享规范](docs/SHARED.md) · [隐私边界](docs/SHARED.md#privacy-boundaries)。
 
 ## 构建与测试
 
-需要 Node.js 22 及以上版本、固定的 Rust 1.99.1 工具链，以及 C/C++ 构建工具。
+需要 Node.js 22+、固定 Rust 1.99.1、WASM 目标及 C/C++ 构建工具。从本仓库运行：
 
-```bash
+```sh
 npm ci
 rustup target add wasm32-unknown-unknown
 npm run build
 npm test
 ```
 
-构建顺序为 `pool → factory → shared-vault → forest`。工厂和 forest 分别嵌入优化后的子 vault WASM。生成文件包括 `artifacts/core_pool.wasm`、`core_factory.wasm`、`core_shared_vault.wasm`、`core_forest.wasm` 和 `build-manifest.json`。运行合约测试前需要先构建。部署操作不会向子合约添加密钥。
+构建顺序为 pool → factory → shared-vault → forest，父合约内嵌优化后的子合约 WASM。`artifacts/` 输出 `core_pool.wasm`、`core_factory.wasm`、`core_shared_vault.wasm`、`core_forest.wasm` 及 `build-manifest.json`。先构建再测试；Core 复制前验证哈希。
 
-```bash
-# 开发用单机可信设置；重新设置需要新的验证器和部署。
+```sh
+# 单机开发设置；新设置需要新的验证密钥和部署。
 npm run zk:setup
 ```
 
-测试向量仅包含公开证明和验证密钥。秘密票据、私钥及生成的证明产物不提交到仓库。v1 和 v2 使用相同的成员关系电路，但采用**不同的域和操作绑定**。
+仅提交公开证明、验证密钥及向量。秘密票据、私钥和生成的证明材料不得纳入版本控制。此开发设置并非经审查的多方仪式。
 
-## 本地链验证
+## 本地链集成验证
 
-将两个仓库检出到同级目录。Core 会验证 Contract 构建产物的 SHA-256，然后再复制。
+将 `Contract/` 与 `Core/` 作为相邻目录检出，从 Contract 执行：
 
-```text
-workspace/
-  Contract/
-  Core/
-```
-
-```bash
+```sh
 cd ../Core
 npm ci
 npm run contract:build
 npm run zk:setup
-npm run demo:shared
+(cd ../Contract && npm run build:test-ft)
+npm run demo:ft
 ```
 
-`demo:shared` 验证两个无密钥 vault 中的三笔入金、源自 A 的票据从 B 提款、面向不同付款目的地的并发双花防护、向不存在的收款账户付款失败后的重试、0.15% 手续费结算，以及 12 条最终确认的 journal 记录。管理员密钥仅在一次性本地链中移除；不会自动执行公开网络部署或密钥移除。
+可通过 Core 的 `CORE_CONTRACT_REPO` 指定其他合约目录。FT 沙箱使用真实 WASM/Groth16 与**本地 TESTUSD 测试代币，而非 Circle USDC**。2026-11-13 最近记录产生 14 条最终化记录，涵盖费用/恢复、API/索引/日志、收款人准备、浏览器票据/收据备份及最终证据锚定。在 Core 执行 `npm run demo:shared` 可验证原生 v2、跨金库支付、并发双花拒绝及收款失败重试。临时本地链演示并不部署公开网络，也不代表真实钱包验证。
 
-## USDC 支持
+## 资产与附加费用
 
-通过 `new_ft` 创建固定 USDC 代币合约地址的新组。存入 1 USDC 时转入 **1.0015 USDC**；提款时另付 **0.0015 USDC**，收款人收到**完整的 1 USDC**。NEAR gas 和存储费用按独立币种处理。本金分散在各 vault 的代币余额中，只有提款手续费进入 forest。Circle 原生 USDC 地址和测试步骤见 [USDC 规范](docs/USDC.md)。当前实现尚未部署到公开网络。
+存款与提款各**额外收取本金的 0.15%**，按资产最小单位向下取整。收款人获得全部本金。
 
-## 手续费与范围
+| 固定面额 | 存款 | 另付提款费用 | 收款 |
+| --- | --- | --- | --- |
+| 1 USDC | 1.0015 USDC | 0.0015 USDC | 1 USDC |
+| 原生 v2 1 NEAR | 含存储 1.0215 NEAR | 含存储 0.0215 NEAR | 1 NEAR |
 
-入金和提款均在本金之外**加收 0.15%**。收款人获得全额本金，0.02 NEAR 存储费用和 gas 另计。v2 将存储费用分配给 registry（0.015 NEAR）和 vault（0.005 NEAR），不是额外收费。重试仅再次支付存储费用。入金手续费在对应 vault 中累计，已确认的提款手续费在 forest 中累计；已赚取的手续费只能转入初始化时固定的 treasury。Forest 没有提取本金的权限。
+FT 分组适用操作存储为 0.02 NEAR，发送者/目标合约首次信用另有 0.005 NEAR 账本押金。账户激活、代币注册、gas 及 FT 转账附带的 1 yocto 单独计算。原生 v2 的 0.02 NEAR 存储分为 registry 0.015 + vault 0.005，并非额外协议费。重试/私密转移支付适用存储，不重复收取协议费。存款费留在金库，已确认提款费归 forest。固定 treasury 只能收取已赚取费用，不能提取本金或待支付负债。
 
-这是支持原生 NEAR v2 与 **USDC/NEP-141 v3** 的黑客松核心实现，采用固定面额和深度为 8 的共享树（总计 256 个输出）。每种资产需要独立的 forest，v3 还将代币合约地址固定在证明域中。不包含自动隐私迁移、可变金额、跨资产桥接、法定税务申报或真实 KYB 审查服务。单机可信设置及电路/合约未经生产安全审计，仅用于本地链和测试网演示。
+`new_ft` 创建独立且固定代币的分组。浏览器目前支持已配置的测试网 FT 分组，原生 NEAR 使用 Core CLI。[USDC/NEP-141 规范与参考地址](docs/USDC.md)。
 
-- [USDC/NEP-141 v3：独立币种手续费、FT 注册与失败恢复](docs/USDC.md)
-- [共享匿名集 v2 与失败恢复规范](docs/SHARED.md)
+## 服务集成与边界
+
+Core 发票 v2 使用现有 ABI/电路，为每个支付单位绑定独立签名引用。引用唯一性、有效期及支付上限均为应用检查，并非合约预留，仍可能并发或超额付款。任意收据根不能替换签名发票支付引用。收据完整性、最终付款、KYB 身份和税务认可分别验证，无需在链上发布企业名称或税务文件。
+
+Core/Front 已支持浏览器票据生成/加密备份及选定字段证据；新 Groth16 支出证明仍在 CLI 生成。KYB 为示例资料流程与另行配置的 SDK 签发者签名检查，并非真实审核或电路强制身份准入。美国/阿布扎比税务准备与 AI 草稿是计划中的服务集成，不是合约功能。
+
+协议尚无生产安全审计、经审查的多方设置或已注资公开网络钱包验证。永久缺失付款回调时保守保留预留状态；不得通过重置 nullifier 或更改目的地制造恢复。可变金额、自动私密分组迁移、跨资产桥、真实 KYB 与法定申报属于后续工作。
+
+## 规范
+
+- [原生 NEAR 共享 v2、恢复及隐私](docs/SHARED.md)
+- [USDC / NEP-141 v3](docs/USDC.md)
 - [独立池 v1 证明格式](docs/PROTOCOL.md)
 - [独立工厂 v1](docs/FACTORY.md)
+- [分布式金库模型](docs/DISTRIBUTED_VAULTS.md)
+- [SDK/服务隐私边界](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md)
