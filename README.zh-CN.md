@@ -41,6 +41,10 @@ npm run zk:setup
 
 仅提交公开证明、验证密钥及向量。秘密票据、私钥和生成的证明材料不得纳入版本控制。此开发设置并非经审查的多方仪式。
 
+## 集成 CI
+
+推送和 PR 调用固定 Core 提交的流水线，将当前 Contract 提交与固定 Core/Front 一起验证：实际 WASM/单元、共享向量、Front SDK 新鲜度、Core/Front 和浏览器测试、原生/FT Groth16 沙箱及准确源版本的开发发布包。私有仓库需要只读检出凭据和 Core 复用工作流访问设置。[版本、证据及配置](https://github.com/Company-privacy-settlement/Core/blob/main/docs/CI.md)。CI 不部署或替换现有验证密钥。
+
 ## 本地链集成验证
 
 将 `Contract/` 与 `Core/` 作为相邻目录检出，从 Contract 执行：

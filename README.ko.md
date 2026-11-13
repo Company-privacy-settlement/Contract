@@ -41,6 +41,10 @@ npm run zk:setup
 
 공개 증명·검증키·벡터만 커밋합니다. 비밀 노트·개인키·생성된 proving 아티팩트는 추적하지 않습니다. 이 개발 셋업은 검토된 다자간 ceremony가 아닙니다.
 
+## 통합 CI
+
+푸시·PR은 고정 Core 파이프라인에서 현재 Contract 커밋과 고정 Core/Front를 함께 검사합니다. 실제 WASM·단위·공유 벡터·Front SDK 최신성, Core/Front·브라우저 테스트, 네이티브/FT Groth16 샌드박스와 정확한 소스의 개발 릴리스를 검증합니다. 비공개 저장소에는 읽기 전용 체크아웃 자격 증명과 Core 재사용 워크플로 접근 설정이 필요합니다. [버전·증거·설정](https://github.com/Company-privacy-settlement/Core/blob/main/docs/CI.md). CI는 배포하거나 기존 검증키를 교체하지 않습니다.
+
 ## 로컬 체인 통합 검증
 
 `Contract/`와 `Core/`를 형제 폴더로 체크아웃하고 Contract에서 실행합니다.

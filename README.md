@@ -41,6 +41,10 @@ npm run zk:setup
 
 Only public proofs, verification keys and vectors are committed. Secret notes, private keys and generated proving artifacts must remain untracked. This development setup is not a reviewed multi-party ceremony.
 
+## Integrated CI
+
+Pushes and PRs call Core's commit-pinned pipeline with this Contract event SHA and a pinned Core/Front baseline. It checks actual WASM/units, shared vectors, Front SDK freshness, Core/Front/browser suites, native/FT Groth16 sandboxes and an exact-source development release. Private repositories need read-only checkout credentials and Core reusable-workflow access. [Pins, evidence and setup](https://github.com/Company-privacy-settlement/Core/blob/main/docs/CI.md). CI does not deploy or replace an existing verifier.
+
 ## End-to-end local chain
 
 Check out `Contract/` and `Core/` as siblings. From Contract:
