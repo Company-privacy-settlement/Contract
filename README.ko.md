@@ -77,6 +77,8 @@ FT 그룹 해당 작업 스토리지는 0.02 NEAR이며 송신자/대상 컨트�
 
 Core의 별도 [Organization API](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATIONS.md)는 오프체인 조직 멤버·역할을 관리합니다. 조직 역할이 컨트랙트 서명, 노트 소유, 지급 목적지 변경이나 기업 신원 검증 권한을 부여하지 않습니다.
 
+[조직 데이터 백업·복구](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATION_BACKUPS.md)는 일관된 온라인 스냅샷, 세션·챌린지 폐기와 격리 복구를 제공합니다. 현재 권한을 별도 승인한 파일을 적용해야 새 운영 DB로 활성화되며, 과거 소유자·역할·대기 초대는 자동으로 권한에 복원하지 않습니다.
+
 Core 인보이스 v2는 기존 ABI·회로로 결제 단위마다 다른 서명 참조를 바인딩합니다. 참조 중복·만료·결제 상한은 앱 검사이며 컨트랙트 예약이 아닙니다. 동시 결제·초과 입금이 가능합니다. 임의 영수증 루트로 서명된 인보이스 결제 참조를 교체할 수 없습니다. 영수증 무결성·최종 지급·KYB 신원·세무 인정은 별도 검사이며 기업명·세무 문서를 온체인에 공개할 필요는 없습니다.
 
 Core/Front는 브라우저 노트 생성·암호화 백업·선택 필드 증빙과 로컬 FT 출금 증명을 지원합니다. 증명기는 고정한 파일·증명 파일 검증과 취소를 지원하며 기존 회로를 유지합니다. [인보이스 결제](https://github.com/Company-privacy-settlement/Core/blob/main/docs/INVOICE_PAYMENTS.md)에서 원래 그룹의 암호화 노트 선택 → 로컬 증명 → 금액·수수료 확인 → 개별 지갑 승인 → 최종화 결제 확인을 지원합니다. 선택 단위 고정, 취소, 서명 직전 기업 키·상태 재검사와 보수적 복구를 적용합니다. [브라우저 증명](https://github.com/Company-privacy-settlement/Core/blob/main/docs/BROWSER_PROVER.md). KYB는 샘플 입력과 별도로 구성한 SDK 발급자 서명 검사이며 실제 심사·회로 강제 신원 정책은 아닙니다. 미국/아부다비 세무 준비·AI 초안은 예정된 서비스 연동이며 컨트랙트 기능이 아닙니다.

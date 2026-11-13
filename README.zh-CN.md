@@ -77,6 +77,8 @@ FT 分组适用操作存储为 0.02 NEAR，发送者/目标合约首次信用另
 
 Core 独立的 [Organization API](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATIONS.md) 管理链下团队成员和角色。组织角色不授予合约签名、票据所有权、付款重定向或已验证企业身份。
 
+[组织数据备份与恢复](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATION_BACKUPS.md)提供一致在线快照、会话/挑战废弃及隔离恢复。必须使用单独审核的当前权限文件才能激活到新的运行数据库；历史所有者、角色和待处理邀请不会自动恢复为权限。
+
 Core 发票 v2 使用现有 ABI/电路，为每个支付单位绑定独立签名引用。引用唯一性、有效期及支付上限均为应用检查，并非合约预留，仍可能并发或超额付款。任意收据根不能替换签名发票支付引用。收据完整性、最终付款、KYB 身份和税务认可分别验证，无需在链上发布企业名称或税务文件。
 
 Core/Front 已支持浏览器票据生成/加密备份、选定字段证据及本地 FT 提现证明。证明器验证固定材料与证明文件，支持取消并保持现有电路；[发票结账](https://github.com/Company-privacy-settlement/Core/blob/main/docs/INVOICE_PAYMENTS.md)支持原分组加密票据选择 → 本地证明 → 金额与费用确认 → 逐项钱包授权 → 最终付款确认，并提供所选单位绑定、取消、签名前商户密钥/状态复查与保守恢复。[浏览器证明](https://github.com/Company-privacy-settlement/Core/blob/main/docs/BROWSER_PROVER.md)。KYB 为示例资料流程与另行配置的 SDK 签发者签名检查，并非真实审核或电路强制身份准入。美国/阿布扎比税务准备与 AI 草稿是计划中的服务集成，不是合约功能。
