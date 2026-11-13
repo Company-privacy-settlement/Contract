@@ -75,6 +75,8 @@ For FT groups, applicable action storage is 0.02 NEAR and first-use storage cred
 
 ## Service integration and limits
 
+Core's separate [Organization API](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATIONS.md) manages off-chain team membership and roles. Those roles do not grant contract signing, note ownership, payout redirection or verified corporate identity.
+
 Core invoices v2 bind a distinct signed reference per payment unit using the existing ABI/circuit. Reference uniqueness, expiry and payment caps are application checks, not contract-enforced reservations. Concurrent payments and overpayments remain possible. An arbitrary receipt root cannot replace a signed invoice payment reference. Receipt integrity, finalized payment, KYB identity and tax acceptance are separate checks; no business names or tax documents need to be published on-chain.
 
 Browser note generation/encrypted backup and selected-field receipts are implemented in Core/Front; new Groth16 spend proofs remain CLI-based. KYB is sample intake plus separately configured SDK issuer-signature checks, not live provider review or circuit-enforced identity admission. US/Abu Dhabi tax preparation and AI drafts are planned service work, not contract functions.
