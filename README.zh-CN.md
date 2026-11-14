@@ -91,7 +91,7 @@ Core 独立的 [Organization API](https://github.com/Company-privacy-settlement/
 
 Core 发票 v2 使用现有 ABI/电路，为每个支付单位绑定独立签名引用。引用唯一性、有效期及支付上限均为应用检查，并非合约预留，仍可能并发或超额付款。任意收据根不能替换签名发票支付引用。收据完整性、最终付款、KYB 身份和税务认可分别验证，无需在链上发布企业名称或税务文件。
 
-Core/Front 已支持浏览器票据生成/加密备份、选定字段证据及本地 FT 提现证明。证明器验证固定材料与证明文件，支持取消并保持现有电路；[发票结账](https://github.com/Company-privacy-settlement/Core/blob/main/docs/INVOICE_PAYMENTS.md)支持原分组加密票据选择 → 本地证明 → 金额与费用确认 → 逐项钱包授权 → 最终付款确认，并提供所选单位绑定、取消、签名前商户密钥/状态复查与保守恢复。[浏览器证明](https://github.com/Company-privacy-settlement/Core/blob/main/docs/BROWSER_PROVER.md)。KYB 为示例资料流程与另行配置的 SDK 签发者签名检查，并非真实审核或电路强制身份准入。美国/阿布扎比税务准备与 AI 草稿是计划中的服务集成，不是合约功能。
+Core/Front 已支持浏览器票据生成/加密备份、选定字段证据及本地 FT 提现证明。证明器验证固定材料与证明文件，支持取消并保持现有电路；[发票结账](https://github.com/Company-privacy-settlement/Core/blob/main/docs/INVOICE_PAYMENTS.md)支持原分组加密票据选择 → 本地证明 → 金额与费用确认 → 逐项钱包授权 → 最终付款确认，并提供所选单位绑定、取消、签名前商户密钥/状态复查与保守恢复。[浏览器证明](https://github.com/Company-privacy-settlement/Core/blob/main/docs/BROWSER_PROVER.md)。KYB 为示例资料流程与另行配置的 SDK 签发者签名检查，并非真实审核或电路强制身份准入。美国/阿布扎比有限规则及来源绑定 AI 草稿已在服务、SDK 与 Front 中实现，不改变合约 ABI 或电路。
 
 协议尚无生产安全审计、经审查的多方设置或已注资公开网络钱包验证。永久缺失付款回调时保守保留预留状态；不得通过重置 nullifier 或更改目的地制造恢复。可变金额、自动私密分组迁移、跨资产桥、真实 KYB 运行验证与法定申报属于后续工作。
 
@@ -117,3 +117,7 @@ KYB/KYC 集成验证（**2026-11-14**）：**428 项 Core 测试**和 **224 项�
 [美国/阿布扎比规则引擎](https://github.com/Company-privacy-settlement/Core/blob/main/docs/RULES.md)按辖区、员工/承包商/B2B 关系及适用日期选择 7 项已核对来源的组件候选规则，保留精确算式与官方依据。浏览器/CLI 本地运行；审核模式需要独立可信的 Ed25519 审批。未附专业审核批准、完整税额、自动预扣或申报。
 
 规则引擎验证（**2026-11-14**）：**459 项 Core 测试**和 **240 项桌面/移动浏览器用例**通过，含新增 31 项 Core 和 16 项 Rules 浏览器用例。类型、Node/浏览器 SDK、静态 Front 构建、编译 CLI 导出/复核、服务重启/备份/恢复及来源/文档检查通过。审核密钥为测试数据；未进行专业税务/法律规则批准、真实纳税人评估、自动预扣或申报。
+
+[AI 税务与程序草稿](https://github.com/Company-privacy-settlement/Core/blob/main/docs/TAX_DRAFTS.md)位于 Organization → Tax drafts：验证规则计算与选定收据值的精确绑定、带来源草稿、组织加密存储、独立审核、不可变修订、撤销及 JSON/Markdown 导出。AI 仅排列已验证语句 ID，不接收金额或证据；确定性提纲明确区分。真实 AI 启用需要私有提供商密钥与模型，有效审核需要运营方固定的签名规则策略。不附带专业规则批准、自主法律建议、法定申报或付款授权。
+
+草稿专项验证（**2026-11-14**）通过：**488 项 Core 测试**（新增草稿 29 项）、**16 项桌面/移动草稿浏览器用例**、3 项 Front 单元、类型检查、Node/浏览器 SDK 与静态构建、编译服务/备份/恢复及文档/来源清单检查。AI 传输与审核签名使用受控测试环境，未执行真实模型调用、专业规则批准或法定申报。
