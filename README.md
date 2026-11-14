@@ -6,6 +6,8 @@ Smart contracts, Groth16 circuit, public vectors and reproducible WASM builds fo
 
 [Service overview](https://github.com/Company-privacy-settlement/Core/blob/main/docs/SERVICE.md) · [Development roadmap](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ROADMAP.md) · [Web Docs](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/)
 
+The separate [Core organization invoice API](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATION_INVOICES.md) now stores immutable signed invoices per organization with idempotency and encryption at rest. This is off-chain service storage; contract ABI, fees and payment proof verification are unchanged.
+
 ## Architecture and versions
 
 | Component | Responsibility |

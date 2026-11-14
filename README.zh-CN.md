@@ -6,6 +6,8 @@ Core 隐私企业结算协议的智能合约、Groth16 电路、公开向量及 
 
 [服务概览](https://github.com/Company-privacy-settlement/Core/blob/main/docs/SERVICE.md) · [开发路线图](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ROADMAP.md) · [网页 Docs](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/)
 
+独立的 [Core 企业发票 API](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATION_INVOICES.md) 现支持按组织存储不可变签名发票、幂等创建和静态加密。这是链下服务存储，合约 ABI、费用与付款证明验证保持不变。
+
 ## 架构与版本
 
 | 组件 | 职责 |

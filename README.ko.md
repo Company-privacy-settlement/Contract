@@ -6,6 +6,8 @@ Core 프라이빗 기업 정산 프로토콜의 스마트 컨트랙트, Groth16 
 
 [서비스 개요](https://github.com/Company-privacy-settlement/Core/blob/main/docs/SERVICE.md) · [개발 로드맵](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ROADMAP.md) · [웹 Docs](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/)
 
+별도 [Core 기업 인보이스 API](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATION_INVOICES.md)는 조직별 서명 인보이스 저장·조회, 중복 방지와 저장 시 암호화를 지원합니다. 오프체인 서비스 저장 기능이며 컨트랙트 ABI·수수료·결제 증명 검증은 기존과 같습니다.
+
 ## 구조와 버전
 
 | 구성 요소 | 역할 |
