@@ -382,3 +382,107 @@ fn longest_implicit_token_sender_fits_the_fixed_storage_budget() {
         owner
     );
 }
+
+// Exercise interleavings while transfers, refunds and fee collection are in flight.
+fn add_security_deposit(v: &mut Vault, commitment: &str, ft_asset: bool, height: u64) {
+    if ft_asset {
+        context("alice.test.near", STORAGE, height);
+        v.prepay_storage(None);
+        context("usdc.test.near", 0, height + 1);
+        assert_eq!(v.ft_on_transfer("alice.test.near".parse().unwrap(), U128(USD + 1500), near_sdk::serde_json::json!({"commitment":commitment,"disclosure_root":"ab".repeat(32)}).to_string()).0, 0);
+    } else {
+        context("alice.test.near", NEAR + fees::deposit_fee(NEAR) + STORAGE, height);
+        v.deposit(commitment.into(), "ab".repeat(32)).detach();
+    }
+}
+fn security_payout(v: &mut Vault, nullifier: &str, height: u64) {
+    context("forest.test.near", LOCAL_STORAGE, height);
+    match v.payout(nullifier.into(), "receiver.test.near".parse().unwrap(), "cd".repeat(32)) {
+        PromiseOrValue::Promise(p) => p.detach(),
+        _ => panic!("Expected one new transfer"),
+    }
+}
+fn interleaved_payout_accounting(ft_asset: bool) {
+    let mut v = if ft_asset { ft_deposit() } else { deposit() };
+    let fee = if ft_asset { 1500 } else { fees::deposit_fee(NEAR) };
+    context("a.forest.test.near", 0, 3);
+    assert!(v.on_registered("123".into(), 1, Ok(true)));
+    add_security_deposit(&mut v, "124", ft_asset, 4);
+    context("a.forest.test.near", 0, 6);
+    assert!(v.on_registered("124".into(), 1, Ok(true)));
+    security_payout(&mut v, "456", 7);
+    security_payout(&mut v, "457", 8);
+    assert_eq!((v.available, v.reserved, v.held), (0, 2, 2));
+    context("a.forest.test.near", 0, 9);
+    assert!(!v.on_payout("456".into(), Err(PromiseError::Failed)));
+    assert!(v.on_payout("457".into(), Ok(())));
+    assert_eq!((v.available, v.reserved, v.held), (0, 1, 1));
+    context("anyone.test.near", 1, 10);
+    v.collect_protocol_fees().detach();
+    assert_eq!((v.earned_fees, v.fees_in_flight), (0, 2 * fee));
+    add_security_deposit(&mut v, "125", ft_asset, 11);
+    context("a.forest.test.near", 0, 13);
+    assert!(v.on_registered("125".into(), 1, Ok(true)));
+    assert!(!v.on_fees(U128(2 * fee), Err(PromiseError::Failed)));
+    assert_eq!((v.earned_fees, v.fees_in_flight), (3 * fee, 0));
+    security_payout(&mut v, "456", 14);
+    context("a.forest.test.near", 0, 15);
+    assert!(v.on_payout("456".into(), Ok(())));
+    assert_eq!((v.available, v.reserved, v.held), (1, 0, 1));
+    assert_eq!(v.earned_fees, 3 * fee);
+}
+#[test]
+fn native_interleaved_payouts_and_failed_fee_collection_preserve_all_liabilities() {
+    interleaved_payout_accounting(false);
+}
+#[test]
+fn ft_interleaved_payouts_and_failed_fee_collection_preserve_all_liabilities() {
+    interleaved_payout_accounting(true);
+}
+fn interleaved_refund_accounting(ft_asset: bool) {
+    let mut v = if ft_asset { ft_deposit() } else { deposit() };
+    let amount = if ft_asset { USD + 1500 } else { NEAR + fees::deposit_fee(NEAR) };
+    add_security_deposit(&mut v, "124", ft_asset, 3);
+    context("a.forest.test.near", 0, 5);
+    assert!(!v.on_registered("123".into(), 1, Ok(false)));
+    assert!(!v.on_registered("124".into(), 1, Ok(false)));
+    assert_eq!((v.refund_liability, v.pending_fees, v.earned_fees), (2 * amount, 0, 0));
+    context("relayer.test.near", 1, 6);
+    v.claim_deposit_refund("123".into()).detach();
+    context("relayer.test.near", 1, 7);
+    v.claim_deposit_refund("124".into()).detach();
+    context("a.forest.test.near", 0, 8);
+    assert!(v.on_refund("124".into(), Ok(())));
+    assert!(!v.on_refund("123".into(), Err(PromiseError::Failed)));
+    assert_eq!((v.refund_liability, v.held), (amount, 1));
+    assert_eq!(v.get_deposit("123".into()).unwrap().state, DepositState::Refundable);
+    context("relayer.test.near", 1, 9);
+    v.claim_deposit_refund("123".into()).detach();
+    context("a.forest.test.near", 0, 10);
+    assert!(v.on_refund("123".into(), Ok(())));
+    assert_eq!((v.refund_liability, v.held, v.earned_fees), (0, 0, 0));
+}
+#[test]
+fn native_interleaved_failed_refunds_preserve_only_the_unpaid_liability() {
+    interleaved_refund_accounting(false);
+}
+#[test]
+fn ft_interleaved_failed_refunds_preserve_only_the_unpaid_liability() {
+    interleaved_refund_accounting(true);
+}
+#[test]
+#[should_panic(expected = "Vault liquidity is not activated yet")]
+fn distinct_pending_native_payouts_cannot_overbook_one_liquid_note() {
+    let mut v = active();
+    security_payout(&mut v, "456", 3);
+    security_payout(&mut v, "457", 4);
+}
+#[test]
+#[should_panic(expected = "Vault liquidity is not activated yet")]
+fn distinct_pending_ft_payouts_cannot_overbook_one_liquid_note() {
+    let mut v = ft_deposit();
+    context("a.forest.test.near", 0, 3);
+    assert!(v.on_registered("123".into(), 1, Ok(true)));
+    security_payout(&mut v, "456", 4);
+    security_payout(&mut v, "457", 5);
+}
