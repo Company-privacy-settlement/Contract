@@ -10,6 +10,8 @@ Core 프라이빗 기업 정산 프로토콜의 스마트 컨트랙트, Groth16 
 
 [조직 결제 대시보드](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PAYMENT_DASHBOARD.md)는 서명 인보이스 검색·내보내기와 검증된 확정 출금 기반 조회를 지원합니다. 대기·실패 거래는 결제로 집계하지 않습니다. 컨트랙트 ABI·수수료·증명 권한은 유지됩니다.
 
+별도 [결제 웹훅 서비스](https://github.com/Company-privacy-settlement/Core/blob/main/docs/WEBHOOKS.md)는 검증된 확정 출금과 연결된 거래 증빙을 소비합니다. HMAC 이벤트·영속 재시도·수신 측 중복 제거는 서비스 기능이며 컨트랙트 ABI·자금 보관·증명 권한은 유지됩니다.
+
 ## 구조와 버전
 
 | 구성 요소 | 역할 |
@@ -101,3 +103,5 @@ Core/Front는 브라우저 노트 생성·암호화 백업·선택 필드 증빙
 - [SDK/서비스 프라이버시](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md)
 
 **2026-11-14 결제 대시보드 검증:** 신규 Core 13개·브라우저 18개를 포함한 **Core 355개 테스트**, **데스크톱·모바일 브라우저 182개 케이스**와 타입·Node/브라우저 SDK·정적 빌드를 통과했습니다. 브라우저의 서비스·지갑 픽스처 검증은 공개망 실배포를 의미하지 않습니다.
+
+**2026-11-14 결제 웹훅 검증:** 신규 Core 24개·브라우저 12개를 포함한 **Core 379개 테스트**, **데스크톱·모바일 브라우저 194개 케이스**와 Node/브라우저 SDK·정적 빌드·컴파일된 서비스 복구 검증을 통과했습니다. 로컬 인덱스·지갑·전송 픽스처 검증이며 실제 수신처 전송·공개 백엔드 배포는 수행하지 않았습니다.

@@ -10,6 +10,8 @@ The separate [Core organization invoice API](https://github.com/Company-privacy-
 
 The [organization payment dashboard](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PAYMENT_DASHBOARD.md) searches/exports signed invoices and derives observed payment states from verified finalized successful withdrawals. Pending/failed wallet attempts do not count. This SDK/Front feature preserves contract ABI, fees and proof permissions.
 
+The separate [signed payment webhook service](https://github.com/Company-privacy-settlement/Core/blob/main/docs/WEBHOOKS.md) consumes verified finalized successful withdrawals with linked transaction provenance. HMAC events, durable retries and receiver deduplication remain service features; contract ABI, principal custody and proof permissions are unchanged.
+
 ## Architecture and versions
 
 | Component | Responsibility |
@@ -101,3 +103,5 @@ This development protocol has no production security audit, reviewed multi-party
 - [SDK/service privacy boundaries](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md)
 
 Payment dashboard validation on **2026-11-14**: **355 Core tests** and **182 desktop/mobile browser cases** passed, including 13 new Core and 18 browser dashboard cases; type checks, Node/browser SDK builds and the static Front build passed. Browser service/wallet fixtures do not establish a live public-network deployment.
+
+Signed webhook validation on **2026-11-14**: **379 Core tests** and **194 desktop/mobile browser cases** passed, including 24 new Core and 12 browser webhook cases. Node/browser SDK, static build and compiled service/recovery checks passed. Tests use local index/wallet/transport fixtures; no real merchant callback or public backend deployment was performed.

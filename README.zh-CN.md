@@ -10,6 +10,8 @@ Core 隐私企业结算协议的智能合约、Groth16 电路、公开向量及 
 
 [组织付款仪表板](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PAYMENT_DASHBOARD.md) 提供签名发票搜索/导出，并从已验证的最终化成功提款计算观察状态。待处理和失败尝试不计入付款，合约 ABI、费用和证明权限不变。
 
+独立的 [付款 Webhook 服务](https://github.com/Company-privacy-settlement/Core/blob/main/docs/WEBHOOKS.md) 使用已验证最终成功提款及关联交易来源。HMAC 事件、持久重试和接收端去重属于服务功能，合约 ABI、资金保管和证明权限不变。
+
 ## 架构与版本
 
 | 组件 | 职责 |
@@ -101,3 +103,5 @@ Core/Front 已支持浏览器票据生成/加密备份、选定字段证据及�
 - [SDK/服务隐私边界](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md)
 
 **2026-11-14 付款仪表板验证：**包含新增 13 项 Core 和 18 项浏览器用例的 **355 项 Core 测试**与 **182 项桌面/移动浏览器用例**通过，类型、Node/浏览器 SDK 和静态构建也通过。浏览器服务/钱包测试夹具不代表公开网络实际部署。
+
+**2026-11-14 付款 Webhook 验证：**含新增 24 项 Core 和 12 项浏览器用例的 **379 项 Core 测试**与 **194 项桌面/移动浏览器用例**通过，Node/浏览器 SDK、静态构建和编译服务恢复检查通过。使用本地索引/钱包/传输夹具，未向实际商户回调发送消息或部署公开后端。
