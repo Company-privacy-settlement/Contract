@@ -1,4 +1,4 @@
-# Core Contract — distributed custody, shared ZK notes
+# Money Station Contracts — distributed custody, shared ZK notes
 
 [English](README.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md)
 
@@ -14,17 +14,17 @@ Contract 仓库提供 Rust/WASM 合约、电路及公共向量。
 
 ## 项目简介
 
-企业需要向供应商、员工和承包商付款，同时避免将发票条款及业务文档公开上链。Core 结合收款人签名请求、本地证明和可审核证据，并将本金分布在独立金库中。
+企业需要向供应商、员工和承包商付款，同时避免将发票条款及业务文档公开上链。Money Station 结合收款人签名请求、本地证明和可审核证据，并将本金分布在独立金库中。
 
 [Hackathon guide](https://github.com/Company-privacy-settlement/Core/blob/main/docs/HACKATHON.md) · [Web Docs](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/) · [Core](https://github.com/Company-privacy-settlement/Core) · [Contract](https://github.com/Company-privacy-settlement/Contract) · [Front](https://github.com/Company-privacy-settlement/Front)
 
 ## 观看演示
 
-[![Core — English narrated hackathon demo](docs/assets/hackathon-demo-poster.png)](https://github.com/Company-privacy-settlement/Front/blob/main/public/media/core-hackathon-demo-en.mp4)
+[![Money Station — English narrated hackathon demo](docs/assets/hackathon-demo-poster.png)](https://github.com/Company-privacy-settlement/Front/blob/main/public/media/money-station-demo-en.mp4)
 
-[Watch English MP4](https://github.com/Company-privacy-settlement/Front/blob/main/public/media/core-hackathon-demo-en.mp4) · [Captions, transcript & chapters](https://github.com/Company-privacy-settlement/Front/blob/main/docs/HACKATHON_DEMO.md) · [Hosted video player](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/media/)
+[Watch English MP4](https://github.com/Company-privacy-settlement/Front/blob/main/public/media/money-station-demo-en.mp4) · [Captions, transcript & chapters](https://github.com/Company-privacy-settlement/Front/blob/main/docs/HACKATHON_DEMO.md) · [Hosted video player](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/media/)
 
-提供英文旁白、字幕及真实应用画面。浏览器片段标明钱包/API 测试环境，并生成真实本地证明。独立章节展示已记录的原生 NEAR 公开测试网验证。
+提供英文旁白、简短字幕、动态图形与真实 Money Station 界面。浏览器片段明确标注钱包/API 测试环境，并生成真实本地证明。原生 NEAR 公开测试网验证另见下方文档。
 
 仓库与站点保留现有访问权限。视频位于 Front；评审需要 Front 权限或下载的视频包。本次提交准备不改变共享范围。
 
