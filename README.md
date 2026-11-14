@@ -63,7 +63,9 @@ npm run demo:ft
 
 [Testnet run and transaction links](https://github.com/Company-privacy-settlement/Core/blob/main/docs/TESTNET_WALLET.md) · [Public evidence](https://github.com/Company-privacy-settlement/Core/blob/main/docs/evidence/testnet-wallet-2026-11-14.json)
 
-Latest recorded engineering gate: **513 Core tests** passed, with SDK/type builds and compiled service restart/backup/recovery. Browser fixtures and public native execution are separate evidence categories.
+[Contract and vault addresses](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/deployments/) · [Address record and verification pins](https://github.com/Company-privacy-settlement/Core/blob/main/docs/DEPLOYED_ADDRESSES.md). Registry and two vaults were rechecked at FINAL block **277653473** on 2026-11-14. This native NEAR testnet reference is separate from browser USDC settlement.
+
+Latest recorded engineering gate: **595 Core tests** passed, with SDK/type builds and compiled service restart/backup/recovery. Browser fixtures and public native execution are separate evidence categories.
 
 ## Architecture and fees
 

@@ -63,7 +63,9 @@ npm run demo:ft
 
 [Testnet run and transaction links](https://github.com/Company-privacy-settlement/Core/blob/main/docs/TESTNET_WALLET.md) · [Public evidence](https://github.com/Company-privacy-settlement/Core/blob/main/docs/evidence/testnet-wallet-2026-11-14.json)
 
-最近记录的工程验证为 **513 项 Core 测试**、SDK/类型构建及编译服务重启/备份/恢复。浏览器测试环境与公开原生实交易证据分别记录。
+[合约与金库地址](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/deployments/) · [地址记录与校验值](https://github.com/Company-privacy-settlement/Core/blob/main/docs/DEPLOYED_ADDRESSES.md)。2026-11-14 在 FINAL 区块 **277653473** 重新核验了注册合约和两个金库。这是原生 NEAR 测试网参考部署，与浏览器 USDC 结算分开。
+
+最近记录的工程验证为 **595 项 Core 测试**、SDK/类型构建及编译服务重启/备份/恢复。浏览器测试环境与公开原生实交易证据分别记录。
 
 ## 架构与费用
 

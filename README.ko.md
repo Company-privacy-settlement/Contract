@@ -63,7 +63,9 @@ npm run demo:ft
 
 [Testnet run and transaction links](https://github.com/Company-privacy-settlement/Core/blob/main/docs/TESTNET_WALLET.md) · [Public evidence](https://github.com/Company-privacy-settlement/Core/blob/main/docs/evidence/testnet-wallet-2026-11-14.json)
 
-최근 기록된 엔지니어링 검증은 **Core 513개 테스트**와 SDK·타입 빌드·컴파일 서비스 재시작/백업/복구입니다. 브라우저 테스트 환경과 공개 네이티브 실거래 증거는 구분합니다.
+[컨트랙트·볼트 주소](https://core-private-settlement-0574c4.jiheon6768.chatgpt.site/docs/deployments/) · [주소 기록과 검증 핀](https://github.com/Company-privacy-settlement/Core/blob/main/docs/DEPLOYED_ADDRESSES.md). 2026-11-14 FINAL 블록 **277653473**에서 레지스트리와 볼트 2개를 재확인했습니다. 네이티브 NEAR 테스트넷 참조이며 브라우저 USDC 정산과 별도입니다.
+
+최근 기록된 엔지니어링 검증은 **Core 595개 테스트**와 SDK·타입 빌드·컴파일 서비스 재시작/백업/복구입니다. 브라우저 테스트 환경과 공개 네이티브 실거래 증거는 구분합니다.
 
 ## 구조와 수수료
 
