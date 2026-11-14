@@ -6,6 +6,8 @@ Private business settlement on NEAR: independent vaults hold principal, shared z
 
 Contract is the Rust/WASM contracts, circuit and public vectors repository.
 
+An opt-in [cover-traffic experiment](https://github.com/Company-privacy-settlement/Core/blob/main/docs/COVER_TRAFFIC.md) now runs bounded operator-owned native notes on testnet. Four transactions finalized; the 0.1 NEAR principal returned to its operator. The synthetic probe had six historical output candidates, three after excluding labelled artificial outputs. Independent participants added: **0**. Budget/frequency limits persist across restart; this is not an anonymity claim.
+
 ## The idea
 
 Businesses need to pay suppliers, employees and contractors without putting invoice terms and business records on-chain. Core combines signed payment requests, local proofs and reviewable evidence while keeping custody distributed across vaults.
@@ -73,13 +75,13 @@ flowchart LR
 
 Deposit and withdrawal each add **0.15%**. The recipient receives the full principal. NEAR action storage, registration, activation and network gas are separate.
 
-The ZK statement hides which input note is spent. Signers, recipients, timing, fixed amounts, vaults and funding edges remain public. This single-payer run does not establish effective anonymity. There is no cover-traffic scheduler; a group currently supports 256 total outputs.
+The ZK statement hides which input note is spent. Signers, recipients, timing, fixed amounts, vaults and funding edges remain public. This single-payer run does not establish effective anonymity. A separate opt-in testnet tool labels operator cover activity; a group currently supports 256 total outputs.
 
 ## Scope and next steps
 
 **Hackathon / development prototype.** The setup is `UNSAFE_LOCAL_DEVELOPMENT_ONLY`. Public-testnet qualification covers native NEAR with a local Ed25519 software wallet. Real browser-wallet/USDC execution, hosted API HTTPS acceptance, observed remote Actions success and production security review remain open.
 
-Next priorities: noncustodial relaying, optional randomized delay/batching, privacy measurements, then budgeted cover-traffic experiments. Live KYB/AI providers, professional rule approval and statutory filing require separate qualification.
+Next priorities: externally hosted relay qualification, independent participation and stronger adversarial privacy measurements. Live KYB/AI providers, professional rule approval and statutory filing require separate qualification.
 
 ## Explore the project
 
