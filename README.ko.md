@@ -8,6 +8,8 @@ Core 프라이빗 기업 정산 프로토콜의 스마트 컨트랙트, Groth16 
 
 별도 [Core 기업 인보이스 API](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATION_INVOICES.md)는 조직별 서명 인보이스 저장·조회, 중복 방지와 저장 시 암호화를 지원합니다. 오프체인 서비스 저장 기능이며 컨트랙트 ABI·수수료·결제 증명 검증은 기존과 같습니다.
 
+[조직 결제 대시보드](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PAYMENT_DASHBOARD.md)는 서명 인보이스 검색·내보내기와 검증된 확정 출금 기반 조회를 지원합니다. 대기·실패 거래는 결제로 집계하지 않습니다. 컨트랙트 ABI·수수료·증명 권한은 유지됩니다.
+
 ## 구조와 버전
 
 | 구성 요소 | 역할 |
@@ -97,3 +99,5 @@ Core/Front는 브라우저 노트 생성·암호화 백업·선택 필드 증빙
 - [독립 팩토리 v1](docs/FACTORY.md)
 - [분산 볼트 모델](docs/DISTRIBUTED_VAULTS.md)
 - [SDK/서비스 프라이버시](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md)
+
+**2026-11-14 결제 대시보드 검증:** 신규 Core 13개·브라우저 18개를 포함한 **Core 355개 테스트**, **데스크톱·모바일 브라우저 182개 케이스**와 타입·Node/브라우저 SDK·정적 빌드를 통과했습니다. 브라우저의 서비스·지갑 픽스처 검증은 공개망 실배포를 의미하지 않습니다.

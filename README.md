@@ -8,6 +8,8 @@ Smart contracts, Groth16 circuit, public vectors and reproducible WASM builds fo
 
 The separate [Core organization invoice API](https://github.com/Company-privacy-settlement/Core/blob/main/docs/ORGANIZATION_INVOICES.md) now stores immutable signed invoices per organization with idempotency and encryption at rest. This is off-chain service storage; contract ABI, fees and payment proof verification are unchanged.
 
+The [organization payment dashboard](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PAYMENT_DASHBOARD.md) searches/exports signed invoices and derives observed payment states from verified finalized successful withdrawals. Pending/failed wallet attempts do not count. This SDK/Front feature preserves contract ABI, fees and proof permissions.
+
 ## Architecture and versions
 
 | Component | Responsibility |
@@ -97,3 +99,5 @@ This development protocol has no production security audit, reviewed multi-party
 - [Independent factory v1](docs/FACTORY.md)
 - [Distributed vault model](docs/DISTRIBUTED_VAULTS.md)
 - [SDK/service privacy boundaries](https://github.com/Company-privacy-settlement/Core/blob/main/docs/PRIVACY.md)
+
+Payment dashboard validation on **2026-11-14**: **355 Core tests** and **182 desktop/mobile browser cases** passed, including 13 new Core and 18 browser dashboard cases; type checks, Node/browser SDK builds and the static Front build passed. Browser service/wallet fixtures do not establish a live public-network deployment.
